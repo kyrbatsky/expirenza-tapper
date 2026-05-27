@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Expirenza Payment Flow</title>
+<style>
+
+:root{--ep:#6B4EFF;--ebg:#F2F2F7;--ecard:#FFFFFF;--et1:#1C1C1E;--et2:#8E8E93;--ebrd:#E5E5EA;--echip:#EBEBF0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+.ph{width:360px;background:var(--ebg);font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,Arial,sans-serif;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.hdr{padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--ebg)}
+.hdr-nm{font-size:17px;font-weight:700;color:var(--et1)}
+.hdr-sb{font-size:13px;color:var(--et2);margin-top:2px}
+.back-lnk{background:none;border:none;color:var(--ep);font-size:14px;font-weight:600}
+.scrl{flex:1;overflow:hidden;padding:0 12px 8px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);overflow:hidden;flex-shrink:0}
+/* Receipt */
+.rh{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px}
+.rh-top{font-size:12px;color:var(--et2);margin-bottom:2px}
+.rh-main{font-size:16px;font-weight:700;color:var(--et1)}
+.rt{font-size:17px;font-weight:700;color:var(--et1)}
+.chev-dn{font-size:11px;color:var(--et2);margin-left:6px}
+.ri{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-top:.5px solid var(--ebrd)}
+.ri-n{font-size:14px;color:var(--et1)}
+.ri-p{font-size:14px;font-weight:700;color:var(--et1)}
+.rdots{display:flex;gap:6px;justify-content:center;padding:8px 0 10px}
+.rdot{width:6px;height:6px;border-radius:50%;background:var(--ebrd)}
+.rdot.a{background:var(--ep);width:18px;border-radius:50px}
+.torn{display:block;width:100%;height:12px}
+/* Split */
+.spl-btn{background:var(--ecard);border:.5px solid var(--ep);color:var(--ep);border-radius:12px;padding:11px;font-size:14px;font-weight:600;width:100%;text-align:center;flex-shrink:0}
+.pchip{padding:7px 14px;border-radius:50px;border:1.5px solid var(--ebrd);font-size:13px;font-weight:600;color:var(--et1);background:var(--ecard);flex-shrink:0}
+.pchip.act{background:var(--ep);border-color:var(--ep);color:white}
+.si-row{display:flex;align-items:center;padding:10px 14px;border-top:.5px solid var(--ebrd);gap:6px}
+.si-nm{font-size:13px;color:var(--et1);flex:1}
+.si-pr{font-size:13px;font-weight:600;color:var(--et1)}
+.sichk{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ebrd);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.sichk.s{background:var(--ep);border-color:var(--ep);color:white}
+/* Tips */
+.tcard{padding:14px 14px 12px;flex-shrink:0}
+.slbl{font-size:11px;font-weight:600;color:var(--et2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.sw{position:relative;background:var(--echip);border-radius:50px;padding:3px;display:flex}
+.si-ind{position:absolute;top:3px;height:calc(100% - 6px);background:var(--ep);border-radius:50px;pointer-events:none}
+.so{text-align:center;padding:11px 4px;position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+.sp{font-size:15px;font-weight:700;color:var(--et2)}
+.sa{font-size:11px;color:var(--et2)}
+.so.act .sp,.so.act .sa{color:#fff}
+.so.act .sa{opacity:.8}
+.skip{text-align:center;color:var(--et2);font-size:13px;padding:7px 0 1px;text-decoration:underline;text-underline-offset:2px}
+/* Waiter avatar */
+.waiter-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#9B7FFF,#6B4EFF);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;border:2px solid var(--ecard);box-shadow:0 0 0 1.5px var(--ep)}
+.waiter-nm{font-size:15px;font-weight:700;color:var(--et1)}
+.waiter-role{font-size:11px;color:var(--et2);margin-top:1px}
+/* Charity */
+.ch-hdr{padding:13px 14px 10px}
+.ch-ttl{font-size:15px;font-weight:700;color:var(--et1)}
+.ch-bd{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+.ch-org{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--echip);border-radius:12px}
+.ch-nm{font-size:13px;font-weight:600;color:var(--et1)}
+.ch-ds{font-size:11px;color:var(--et2);margin-top:1px}
+/* Counter */
+.cnt-wrap{background:var(--echip);border-radius:12px;padding:9px 12px;display:flex;align-items:center;gap:9px}
+.cnt-avas{display:flex;align-items:center}
+.cnt-ava{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--ecard);margin-left:-5px;font-size:7px;font-weight:700;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cnt-ava:first-child{margin-left:0}
+.cnt-num{font-size:11px;font-weight:700;color:var(--et1)}
+.cnt-lbl{font-size:10px;color:var(--et2);margin-top:1px}
+.cnt-dot{width:7px;height:7px;border-radius:50%;background:#34C759;flex-shrink:0;margin-left:auto}
+/* Footer */
+.ftr{background:var(--ecard);border-top:.5px solid var(--ebrd);padding:12px 14px 20px;flex-shrink:0}
+.tot-r{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.tot-l{font-size:14px;color:var(--et2)}
+.tot-v{font-size:22px;font-weight:700;color:var(--et1)}
+.pay-mono{width:100%;background:var(--et1);color:white;border:none;border-radius:14px;padding:15px;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px}
+.pay-mono span.m{font-weight:400;letter-spacing:-.5px}
+.pay-mono span.p{font-weight:700}
+.pay-row{display:flex;gap:10px;margin-top:10px}
+.pay-alt{flex:1;background:var(--ecard);color:var(--et1);border:.5px solid var(--ebrd);border-radius:12px;padding:13px 8px;font-size:14px;font-weight:600;text-align:center}
+.disclaimer{text-align:center;font-size:11px;color:var(--et2);margin-top:10px}
+.disclaimer a{color:var(--ep);text-decoration:none}
+/* Success */
+.succ-wrap{flex:1;display:flex;flex-direction:column;align-items:center;padding:28px 18px 16px}
+.succ-ico{width:68px;height:68px;border-radius:50%;background:#34C759;display:flex;align-items:center;justify-content:center;font-size:28px;color:white;font-weight:700;margin-bottom:14px}
+.succ-ttl{font-size:21px;font-weight:700;color:var(--et1);margin-bottom:5px;text-align:center}
+.succ-sub{font-size:13px;color:var(--et2);margin-bottom:18px;text-align:center}
+.succ-card{width:100%;background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);margin-bottom:14px}
+.srow{display:flex;justify-content:space-between;padding:10px 16px}
+.srow+.srow{border-top:.5px solid var(--ebrd)}
+.srl{font-size:13px;color:var(--et2)}
+.srv{font-size:13px;font-weight:600;color:var(--et1)}
+.srv.p{color:var(--ep)}
+.done-b{width:100%;background:var(--ep);color:white;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:700}
+/* Loyalty */
+.lcard{background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);padding:14px;flex-shrink:0}
+.lcard-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.lcard-nm{font-size:14px;font-weight:700;color:var(--et1)}
+.lcard-ds{font-size:11px;color:var(--et2);margin-top:1px}
+.cb-box{background:var(--echip);border-radius:12px;padding:12px;text-align:center}
+.cb-amt{font-size:26px;font-weight:700;color:var(--ep)}
+.cb-lbl{font-size:11px;color:var(--et2);margin-top:2px}
+.stamps{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.stmp{width:34px;height:34px;border-radius:50%;background:var(--echip);border:1.5px solid var(--ebrd);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--et2)}
+.stmp.f{background:var(--ep);border-color:var(--ep);color:white}
+
+body{margin:0;padding:0;background:#E8E8ED;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,Arial,sans-serif}
+.pg{width:1122px;height:794px;background:white;position:relative;overflow:hidden;
+      margin:0 auto 16px;display:flex;flex-direction:column}
+@media print{
+  body{background:white;margin:0;padding:0}
+  .pg{margin:0;break-after:page;page-break-after:always;width:297mm;height:210mm}
+  @page{size:A4 landscape;margin:0}
+}
+</style>
+</head>
+<body>
+<div class="pg" style="background:linear-gradient(150deg,#6B4EFF 0%,#4B2ECC 100%);justify-content:center;align-items:center;gap:0">
+  <div style="text-align:center;margin-bottom:32px">
+    <div style="font-size:56px;font-weight:800;color:white;letter-spacing:-1px;margin-bottom:6px">Expirenza</div>
+    <div style="font-size:17px;color:rgba(255,255,255,.65)">Payment Flow — UX Prototype</div>
+  </div>
+  <div style="display:flex;gap:20px;justify-content:center">
+    <div style="background:rgba(255,255,255,.12);border-radius:16px;padding:22px 28px;min-width:220px">
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Варіанти</div>
+      <div style="font-size:13px;color:white;font-weight:600;margin-bottom:6px">A — Чек + Чайові + Благодійність</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.65)">B — Чек + Чайові</div>
+    </div>
+    <div style="background:rgba(255,255,255,.08);border-radius:16px;padding:22px 28px;min-width:320px">
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Стани у раскадровці</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:5px">· Рахунок: згорнутий та розгорнутий стан</div><div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:5px">· Розділення рахунку між гостями</div><div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:5px">· Чайові з персоналізацією (фото офіціанта)</div><div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:5px">· Вибір благодійного донату</div><div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:5px">· Три способи оплати</div><div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:5px">· Екран подяки — з донатом і без</div><div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:5px">· Лояльність та бонуси monobank</div>
+    </div>
+  </div>
+</div>
+<div class="pg"><div style="background:#6B4EFF;padding:14px 28px 12px;flex-shrink:0"><div style="font-size:15px;font-weight:700;color:white;margin-bottom:2px">Варіант A  ·  Рахунок і розділення</div><div style="font-size:10px;color:rgba(255,255,255,.65)">Свайп між рахунками гостей · Розгортання деталей · Розділення рахунку</div></div><div style="display:flex;align-items:flex-start;justify-content:center;gap:10px;padding:16px 24px 0"><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div class="hdr"><div><div class="hdr-nm">Expirenza</div><div class="hdr-sb">Стіл №7</div></div></div>
+  <div class="scrl">
+    <div class="card">
+  <div class="rh">
+    <div><div class="rh-top">Стіл №7</div><div class="rh-main">До сплати</div></div>
+    <div style="display:flex;align-items:center"><span class="rt">1 300 ₴</span><span class="chev-dn">▼</span></div>
+  </div>
+  <div class="rdots"><div class="rdota"></div><div class="rdot"></div><div class="rdot"></div></div>
+  <svg class="torn" viewBox="0 0 360 12" preserveAspectRatio="none"><path d="M0,0 L0,6 L8,12 L16,6 L24,12 L32,6 L40,12 L48,6 L56,12 L64,6 L72,12 L80,6 L88,12 L96,6 L104,12 L112,6 L120,12 L128,6 L136,12 L144,6 L152,12 L160,6 L168,12 L176,6 L184,12 L192,6 L200,12 L208,6 L216,12 L224,6 L232,12 L240,6 L248,12 L256,6 L264,12 L272,6 L280,12 L288,6 L296,12 L304,6 L312,12 L320,6 L328,12 L336,6 L344,12 L352,6 L360,12 L360,0 Z" fill="var(--ebg)"/></svg>
+</div>
+    <button class="spl-btn">Розділити рахунок</button>
+    <div class="card tcard">
+  <div class="waiter-row">
+  <div class="avatar">АН</div>
+  <div><div class="waiter-nm">Чайові для Анни</div><div class="waiter-role">Офіціант вашого столу</div></div>
+</div>
+  <div class="sw"><div class="so"><span class="sp">5%</span><span class="sa">65 ₴</span></div><div class="so"><span class="sp">10%</span><span class="sa">130 ₴</span></div><div class="so"><span class="sp">15%</span><span class="sa">195 ₴</span></div><div class="so"><span class="sp">Інша</span><span class="sa">сума</span></div></div>
+  <div class="skip">Без чайових</div>
+</div>
+    <div class="card">
+  <div class="ch-hdr"><div class="ch-ttl">Підтримка наших захисників</div></div>
+  <div class="ch-bd">
+    <div class="ch-org">
+      <span style="font-size:20px">🇺🇦</span>
+      <div><div class="ch-nm">БФ «Повернись живим»</div><div class="ch-ds">Оснащення ЗСУ та тактична медицина</div></div>
+    </div>
+    <div class="cnt-wrap">
+  <div class="cnt-avas">
+    <div class="cnt-ava" style="background:#FF6B6B">МА</div>
+    <div class="cnt-ava" style="background:#4ECDC4">ОВ</div>
+    <div class="cnt-ava" style="background:#45B7D1">ТН</div>
+    <div class="cnt-ava" style="background:#96CEB4">ІС</div>
+    <div class="cnt-ava" style="background:#DDA0DD">+</div>
+  </div>
+  <div>
+    <div class="cnt-num">1 247 гостей долучились</div>
+    <div class="cnt-lbl">через Expirenza цього місяця</div>
+  </div>
+  <div class="cnt-dot"></div>
+</div>
+    <div class="sw"><div class="so"><span class="sp">25 ₴</span><span class="sa">підтримка</span></div><div class="so"><span class="sp">50 ₴</span><span class="sa">від серця</span></div><div class="so"><span class="sp">100 ₴</span><span class="sa">героям</span></div></div>
+    <div class="skip">Пропустити</div>
+  </div>
+</div>
+  </div>
+  <div class="ftr">
+  <div class="tot-r"><span class="tot-l">До оплати</span><span class="tot-v">1 300 ₴</span></div>
+  <button class="pay-mono"><span class="m">mono</span>&nbsp;<span class="p">Pay</span></button>
+  <div class="pay-row">
+    <button class="pay-alt">&#x2318; Pay</button>
+    <button class="pay-alt">Карткою онлайн</button>
+  </div>
+  <div class="disclaimer">Продовжуючи, ви приймаєте <a>Правила сервісу</a></div>
+</div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Рахунок — згорнуто</div>
+</div><div style="align-self:center;padding-bottom:20px;color:#D1D1D6;font-size:22px;line-height:1;flex-shrink:0">›</div><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div class="hdr"><div><div class="hdr-nm">Expirenza</div><div class="hdr-sb">Стіл №7</div></div></div>
+  <div class="scrl" style="gap:8px">
+    <div class="card">
+  <div class="rh">
+    <div><div class="rh-top">Стіл №7</div><div class="rh-main">До сплати</div></div>
+    <div style="display:flex;align-items:center"><span class="rt">1 300 ₴</span><span class="chev-dn">▲</span></div>
+  </div>
+  <div class="ri"><span class="ri-n">Креветочні чіпси</span><span class="ri-p">100 ₴</span></div><div class="ri"><span class="ri-n">Салат зі свинячими вухами, морквою та болгарським перцем</span><span class="ri-p">300 ₴</span></div><div class="ri"><span class="ri-n">Тарган мадагаскарський</span><span class="ri-p">120 ₴</span></div><div class="ri"><span class="ri-n">Столітні яйця в імбирному соусі</span><span class="ri-p">280 ₴</span></div><div class="ri"><span class="ri-n">Кокос</span><span class="ri-p">120 ₴</span></div><div class="ri"><span class="ri-n">Нільський окунь</span><span class="ri-p">380 ₴</span></div>
+  <div class="rdots"><div class="rdota"></div><div class="rdot"></div><div class="rdot"></div></div>
+  <svg class="torn" viewBox="0 0 360 12" preserveAspectRatio="none"><path d="M0,0 L0,6 L8,12 L16,6 L24,12 L32,6 L40,12 L48,6 L56,12 L64,6 L72,12 L80,6 L88,12 L96,6 L104,12 L112,6 L120,12 L128,6 L136,12 L144,6 L152,12 L160,6 L168,12 L176,6 L184,12 L192,6 L200,12 L208,6 L216,12 L224,6 L232,12 L240,6 L248,12 L256,6 L264,12 L272,6 L280,12 L288,6 L296,12 L304,6 L312,12 L320,6 L328,12 L336,6 L344,12 L352,6 L360,12 L360,0 Z" fill="var(--ebg)"/></svg>
+</div>
+    <button class="spl-btn">Розділити рахунок</button>
+  </div>
+  <div class="ftr">
+  <div class="tot-r"><span class="tot-l">До оплати</span><span class="tot-v">1 300 ₴</span></div>
+  <button class="pay-mono"><span class="m">mono</span>&nbsp;<span class="p">Pay</span></button>
+  <div class="pay-row">
+    <button class="pay-alt">&#x2318; Pay</button>
+    <button class="pay-alt">Карткою онлайн</button>
+  </div>
+  <div class="disclaimer">Продовжуючи, ви приймаєте <a>Правила сервісу</a></div>
+</div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Рахунок — розгорнуто</div>
+</div><div style="align-self:center;padding-bottom:20px;color:#D1D1D6;font-size:22px;line-height:1;flex-shrink:0">›</div><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div class="hdr">
+    <button class="back-lnk">← Назад</button>
+    <span style="font-size:15px;font-weight:700;color:var(--et1)">Розділити рахунок</span>
+    <span style="width:56px"></span>
+  </div>
+  <div style="flex-shrink:0;padding:0 0 4px">
+    <div style="font-size:13px;color:var(--et2);padding:2px 14px 10px">Оберіть страви, які оплачуєте ви</div>
+    <div style="display:flex;gap:8px;padding:0 14px">
+      <div class="pchip act">Я</div><div class="pchip">Аня</div><div class="pchip">Петро</div>
+    </div>
+  </div>
+  <div style="flex:1;overflow:hidden;padding:0 12px">
+    <div class="card"><div class="si-row"><span class="si-nm">Креветочні чіпси</span><span class="si-pr">100 ₴</span><div class="sichks">✓</div></div><div class="si-row"><span class="si-nm">Салат зі свинячими вухами</span><span class="si-pr">300 ₴</span><div class="sichk"></div></div><div class="si-row"><span class="si-nm">Тарган мадагаскарський</span><span class="si-pr">120 ₴</span><div class="sichks">✓</div></div><div class="si-row"><span class="si-nm">Столітні яйця</span><span class="si-pr">280 ₴</span><div class="sichk"></div></div><div class="si-row"><span class="si-nm">Кокос</span><span class="si-pr">120 ₴</span><div class="sichks">✓</div></div><div class="si-row"><span class="si-nm">Нільський окунь</span><span class="si-pr">380 ₴</span><div class="sichk"></div></div></div>
+  </div>
+  <div class="ftr">
+  <div class="tot-r"><span class="tot-l">Ваша частка</span><span class="tot-v">220 ₴</span></div>
+  <button class="pay-mono"><span class="m">Підтвердити</span></button>
+</div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Розділення рахунку</div>
+</div></div><div style="position:absolute;bottom:10px;right:24px;font-size:8px;color:#C7C7CC">Expirenza · monobank · 2026</div></div>
+<div class="pg"><div style="background:#6B4EFF;padding:14px 28px 12px;flex-shrink:0"><div style="font-size:15px;font-weight:700;color:white;margin-bottom:2px">Варіант A  ·  Чайові, благодійність, оплата</div><div style="font-size:10px;color:rgba(255,255,255,.65)">Персоналізовані чайові · Вибір донату · Три способи оплати</div></div><div style="display:flex;align-items:flex-start;justify-content:center;gap:10px;padding:16px 24px 0"><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div class="hdr"><div><div class="hdr-nm">Expirenza</div><div class="hdr-sb">Стіл №7</div></div></div>
+  <div class="scrl">
+    <div class="card">
+  <div class="rh">
+    <div><div class="rh-top">Стіл №7</div><div class="rh-main">До сплати</div></div>
+    <div style="display:flex;align-items:center"><span class="rt">1 300 ₴</span><span class="chev-dn">▼</span></div>
+  </div>
+  <div class="rdots"><div class="rdota"></div><div class="rdot"></div><div class="rdot"></div></div>
+  <svg class="torn" viewBox="0 0 360 12" preserveAspectRatio="none"><path d="M0,0 L0,6 L8,12 L16,6 L24,12 L32,6 L40,12 L48,6 L56,12 L64,6 L72,12 L80,6 L88,12 L96,6 L104,12 L112,6 L120,12 L128,6 L136,12 L144,6 L152,12 L160,6 L168,12 L176,6 L184,12 L192,6 L200,12 L208,6 L216,12 L224,6 L232,12 L240,6 L248,12 L256,6 L264,12 L272,6 L280,12 L288,6 L296,12 L304,6 L312,12 L320,6 L328,12 L336,6 L344,12 L352,6 L360,12 L360,0 Z" fill="var(--ebg)"/></svg>
+</div>
+    <button class="spl-btn">Розділити рахунок</button>
+    <div class="card tcard">
+  <div class="waiter-row">
+  <div class="avatar">АН</div>
+  <div><div class="waiter-nm">Чайові для Анни</div><div class="waiter-role">Офіціант вашого столу</div></div>
+</div>
+  <div class="sw"><div class="si-ind" style="left:25.0%;width:25.0%;opacity:1"></div><div class="so"><span class="sp">5%</span><span class="sa">65 ₴</span></div><div class="soact"><span class="sp">10%</span><span class="sa">130 ₴</span></div><div class="so"><span class="sp">15%</span><span class="sa">195 ₴</span></div><div class="so"><span class="sp">Інша</span><span class="sa">сума</span></div></div>
+  <div class="skip">Без чайових</div>
+</div>
+    <div class="card">
+  <div class="ch-hdr"><div class="ch-ttl">Підтримка наших захисників</div></div>
+  <div class="ch-bd">
+    <div class="ch-org">
+      <span style="font-size:20px">🇺🇦</span>
+      <div><div class="ch-nm">БФ «Повернись живим»</div><div class="ch-ds">Оснащення ЗСУ та тактична медицина</div></div>
+    </div>
+    <div class="cnt-wrap">
+  <div class="cnt-avas">
+    <div class="cnt-ava" style="background:#FF6B6B">МА</div>
+    <div class="cnt-ava" style="background:#4ECDC4">ОВ</div>
+    <div class="cnt-ava" style="background:#45B7D1">ТН</div>
+    <div class="cnt-ava" style="background:#96CEB4">ІС</div>
+    <div class="cnt-ava" style="background:#DDA0DD">+</div>
+  </div>
+  <div>
+    <div class="cnt-num">1 247 гостей долучились</div>
+    <div class="cnt-lbl">через Expirenza цього місяця</div>
+  </div>
+  <div class="cnt-dot"></div>
+</div>
+    <div class="sw"><div class="si-ind" style="left:66.66666666666667%;width:33.333333333333336%;opacity:1"></div><div class="so"><span class="sp">25 ₴</span><span class="sa">підтримка</span></div><div class="so"><span class="sp">50 ₴</span><span class="sa">від серця</span></div><div class="soact"><span class="sp">100 ₴</span><span class="sa">героям</span></div></div>
+    <div class="skip">Пропустити</div>
+  </div>
+</div>
+  </div>
+  <div class="ftr">
+  <div class="tot-r"><span class="tot-l">До оплати</span><span class="tot-v">1 480 ₴</span></div>
+  <button class="pay-mono"><span class="m">mono</span>&nbsp;<span class="p">Pay</span></button>
+  <div class="pay-row">
+    <button class="pay-alt">&#x2318; Pay</button>
+    <button class="pay-alt">Карткою онлайн</button>
+  </div>
+  <div class="disclaimer">Продовжуючи, ви приймаєте <a>Правила сервісу</a></div>
+</div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Чайові + благодійність</div>
+</div><div style="align-self:center;padding-bottom:20px;color:#D1D1D6;font-size:22px;line-height:1;flex-shrink:0">›</div><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div class="hdr"><div><div class="hdr-nm">Expirenza</div><div class="hdr-sb">Стіл №7</div></div></div>
+  <div class="scrl">
+    <div class="card">
+  <div class="rh">
+    <div><div class="rh-top">Стіл №7</div><div class="rh-main">До сплати</div></div>
+    <div style="display:flex;align-items:center"><span class="rt">1 300 ₴</span><span class="chev-dn">▼</span></div>
+  </div>
+  <div class="rdots"><div class="rdota"></div><div class="rdot"></div><div class="rdot"></div></div>
+  <svg class="torn" viewBox="0 0 360 12" preserveAspectRatio="none"><path d="M0,0 L0,6 L8,12 L16,6 L24,12 L32,6 L40,12 L48,6 L56,12 L64,6 L72,12 L80,6 L88,12 L96,6 L104,12 L112,6 L120,12 L128,6 L136,12 L144,6 L152,12 L160,6 L168,12 L176,6 L184,12 L192,6 L200,12 L208,6 L216,12 L224,6 L232,12 L240,6 L248,12 L256,6 L264,12 L272,6 L280,12 L288,6 L296,12 L304,6 L312,12 L320,6 L328,12 L336,6 L344,12 L352,6 L360,12 L360,0 Z" fill="var(--ebg)"/></svg>
+</div>
+    <div class="card tcard">
+  <div class="waiter-row">
+  <div class="avatar">АН</div>
+  <div><div class="waiter-nm">Чайові для Анни</div><div class="waiter-role">Офіціант вашого столу</div></div>
+</div>
+  <div class="sw"><div class="si-ind" style="left:25.0%;width:25.0%;opacity:1"></div><div class="so"><span class="sp">5%</span><span class="sa">65 ₴</span></div><div class="soact"><span class="sp">10%</span><span class="sa">130 ₴</span></div><div class="so"><span class="sp">15%</span><span class="sa">195 ₴</span></div><div class="so"><span class="sp">Інша</span><span class="sa">сума</span></div></div>
+  <div class="skip">Без чайових</div>
+</div>
+    <div class="card">
+  <div class="ch-hdr"><div class="ch-ttl">Підтримка наших захисників</div></div>
+  <div class="ch-bd">
+    <div class="ch-org">
+      <span style="font-size:20px">🇺🇦</span>
+      <div><div class="ch-nm">БФ «Повернись живим»</div><div class="ch-ds">Оснащення ЗСУ та тактична медицина</div></div>
+    </div>
+    <div class="cnt-wrap">
+  <div class="cnt-avas">
+    <div class="cnt-ava" style="background:#FF6B6B">МА</div>
+    <div class="cnt-ava" style="background:#4ECDC4">ОВ</div>
+    <div class="cnt-ava" style="background:#45B7D1">ТН</div>
+    <div class="cnt-ava" style="background:#96CEB4">ІС</div>
+    <div class="cnt-ava" style="background:#DDA0DD">+</div>
+  </div>
+  <div>
+    <div class="cnt-num">1 247 гостей долучились</div>
+    <div class="cnt-lbl">через Expirenza цього місяця</div>
+  </div>
+  <div class="cnt-dot"></div>
+</div>
+    <div class="sw"><div class="si-ind" style="left:66.66666666666667%;width:33.333333333333336%;opacity:1"></div><div class="so"><span class="sp">25 ₴</span><span class="sa">підтримка</span></div><div class="so"><span class="sp">50 ₴</span><span class="sa">від серця</span></div><div class="soact"><span class="sp">100 ₴</span><span class="sa">героям</span></div></div>
+    <div class="skip">Пропустити</div>
+  </div>
+</div>
+  </div>
+  <div class="ftr">
+  <div class="tot-r"><span class="tot-l">До оплати</span><span class="tot-v">1 480 ₴</span></div>
+  <button class="pay-mono"><span class="m">mono</span>&nbsp;<span class="p">Pay</span></button>
+  <div class="pay-row">
+    <button class="pay-alt">&#x2318; Pay</button>
+    <button class="pay-alt">Карткою онлайн</button>
+  </div>
+  <div class="disclaimer">Продовжуючи, ви приймаєте <a>Правила сервісу</a></div>
+</div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Готово до оплати</div>
+</div><div style="align-self:center;padding-bottom:20px;color:#D1D1D6;font-size:22px;line-height:1;flex-shrink:0">›</div><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div class="succ-wrap">
+    <div class="succ-ico">✓</div>
+    <div class="succ-ttl">Оплату здійснено!</div>
+    <div class="succ-sub">Дякуємо за підтримку ЗСУ 💙</div>
+    <div class="succ-card"><div class="srow"><span class="srl">Рахунок</span><span class="srv ">1 300 ₴</span></div><div class="srow"><span class="srl">Чайові</span><span class="srv p">+130 ₴</span></div><div class="srow"><span class="srl">Благодійність</span><span class="srv p">+50 ₴</span></div><div class="srow"><span class="srl">Разом</span><span class="srv ">1 480 ₴</span></div></div>
+    <button class="done-b">Готово</button>
+  </div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Дякуємо — з донатом</div>
+</div></div><div style="position:absolute;bottom:10px;right:24px;font-size:8px;color:#C7C7CC">Expirenza · monobank · 2026</div></div>
+<div class="pg"><div style="background:#3A3A3C;padding:14px 28px 12px;flex-shrink:0"><div style="font-size:15px;font-weight:700;color:white;margin-bottom:2px">Варіант A  ·  Лояльність | Варіант B  ·  Повний флоу</div><div style="font-size:10px;color:rgba(255,255,255,.65)">Бонуси та кешбек monobank · Спрощений флоу без блоку благодійності</div></div><div style="display:flex;align-items:flex-start;justify-content:center;gap:10px;padding:16px 24px 0"><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div style="text-align:center;padding:18px 16px 10px;flex-shrink:0">
+    <div style="font-size:36px;margin-bottom:6px">🎉</div>
+    <div style="font-size:20px;font-weight:700;color:var(--et1)">Дякуємо!</div>
+    <div style="font-size:12px;color:var(--et2);margin-top:3px">Ваші бонуси за цей візит</div>
+  </div>
+  <div class="scrl" style="padding-top:0">
+    <div class="lcard">
+      <div class="lcard-h"><span style="font-size:22px">🏦</span><div><div class="lcard-nm">monobank кешбек</div><div class="lcard-ds">Нараховано на картку</div></div></div>
+      <div class="cb-box"><div class="cb-amt">26 ₴</div><div class="cb-lbl">2% від суми оплати</div></div>
+    </div>
+    <div class="lcard">
+      <div class="lcard-h"><span style="font-size:22px">🍽️</span><div><div class="lcard-nm">Expirenza Stamps</div><div class="lcard-ds">Ще 2 відвідування — кава у подарунок</div></div></div>
+      <div class="stamps"><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmp"></div><div class="stmp"></div></div>
+      <div style="font-size:11px;color:var(--et2);margin-top:7px">8 з 10 штампів</div>
+    </div>
+  </div>
+  <div style="padding:4px 14px 18px;flex-shrink:0">
+    <button class="done-b" style="background:var(--ep)">Забронювати столик</button>
+  </div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Бонуси і лояльність</div>
+</div><div style="align-self:center;padding-bottom:20px;color:#D1D1D6;font-size:22px;line-height:1;flex-shrink:0">›</div><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div class="hdr"><div><div class="hdr-nm">Expirenza</div><div class="hdr-sb">Стіл №7</div></div></div>
+  <div class="scrl">
+    <div class="card">
+  <div class="rh">
+    <div><div class="rh-top">Стіл №7</div><div class="rh-main">До сплати</div></div>
+    <div style="display:flex;align-items:center"><span class="rt">1 300 ₴</span><span class="chev-dn">▼</span></div>
+  </div>
+  <div class="rdots"><div class="rdota"></div><div class="rdot"></div><div class="rdot"></div></div>
+  <svg class="torn" viewBox="0 0 360 12" preserveAspectRatio="none"><path d="M0,0 L0,6 L8,12 L16,6 L24,12 L32,6 L40,12 L48,6 L56,12 L64,6 L72,12 L80,6 L88,12 L96,6 L104,12 L112,6 L120,12 L128,6 L136,12 L144,6 L152,12 L160,6 L168,12 L176,6 L184,12 L192,6 L200,12 L208,6 L216,12 L224,6 L232,12 L240,6 L248,12 L256,6 L264,12 L272,6 L280,12 L288,6 L296,12 L304,6 L312,12 L320,6 L328,12 L336,6 L344,12 L352,6 L360,12 L360,0 Z" fill="var(--ebg)"/></svg>
+</div>
+    <button class="spl-btn">Розділити рахунок</button>
+    <div class="card tcard">
+  <div class="waiter-row">
+  <div class="avatar">АН</div>
+  <div><div class="waiter-nm">Чайові для Анни</div><div class="waiter-role">Офіціант вашого столу</div></div>
+</div>
+  <div class="sw"><div class="so"><span class="sp">5%</span><span class="sa">65 ₴</span></div><div class="so"><span class="sp">10%</span><span class="sa">130 ₴</span></div><div class="so"><span class="sp">15%</span><span class="sa">195 ₴</span></div><div class="so"><span class="sp">Інша</span><span class="sa">сума</span></div></div>
+  <div class="skip">Без чайових</div>
+</div>
+  </div>
+  <div class="ftr">
+  <div class="tot-r"><span class="tot-l">До оплати</span><span class="tot-v">1 300 ₴</span></div>
+  <button class="pay-mono"><span class="m">mono</span>&nbsp;<span class="p">Pay</span></button>
+  <div class="pay-row">
+    <button class="pay-alt">&#x2318; Pay</button>
+    <button class="pay-alt">Карткою онлайн</button>
+  </div>
+  <div class="disclaimer">Продовжуючи, ви приймаєте <a>Правила сервісу</a></div>
+</div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Варіант B — головний екран</div>
+</div><div style="align-self:center;padding-bottom:20px;color:#D1D1D6;font-size:22px;line-height:1;flex-shrink:0">›</div><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div class="hdr"><div><div class="hdr-nm">Expirenza</div><div class="hdr-sb">Стіл №7</div></div></div>
+  <div class="scrl">
+    <div class="card">
+  <div class="rh">
+    <div><div class="rh-top">Стіл №7</div><div class="rh-main">До сплати</div></div>
+    <div style="display:flex;align-items:center"><span class="rt">1 300 ₴</span><span class="chev-dn">▼</span></div>
+  </div>
+  <div class="rdots"><div class="rdota"></div><div class="rdot"></div><div class="rdot"></div></div>
+  <svg class="torn" viewBox="0 0 360 12" preserveAspectRatio="none"><path d="M0,0 L0,6 L8,12 L16,6 L24,12 L32,6 L40,12 L48,6 L56,12 L64,6 L72,12 L80,6 L88,12 L96,6 L104,12 L112,6 L120,12 L128,6 L136,12 L144,6 L152,12 L160,6 L168,12 L176,6 L184,12 L192,6 L200,12 L208,6 L216,12 L224,6 L232,12 L240,6 L248,12 L256,6 L264,12 L272,6 L280,12 L288,6 L296,12 L304,6 L312,12 L320,6 L328,12 L336,6 L344,12 L352,6 L360,12 L360,0 Z" fill="var(--ebg)"/></svg>
+</div>
+    <div class="card tcard">
+  <div class="waiter-row">
+  <div class="avatar">АН</div>
+  <div><div class="waiter-nm">Чайові для Анни</div><div class="waiter-role">Офіціант вашого столу</div></div>
+</div>
+  <div class="sw"><div class="si-ind" style="left:25.0%;width:25.0%;opacity:1"></div><div class="so"><span class="sp">5%</span><span class="sa">65 ₴</span></div><div class="soact"><span class="sp">10%</span><span class="sa">130 ₴</span></div><div class="so"><span class="sp">15%</span><span class="sa">195 ₴</span></div><div class="so"><span class="sp">Інша</span><span class="sa">сума</span></div></div>
+  <div class="skip">Без чайових</div>
+</div>
+    
+  </div>
+  <div class="ftr">
+  <div class="tot-r"><span class="tot-l">До оплати</span><span class="tot-v">1 430 ₴</span></div>
+  <button class="pay-mono"><span class="m">mono</span>&nbsp;<span class="p">Pay</span></button>
+  <div class="pay-row">
+    <button class="pay-alt">&#x2318; Pay</button>
+    <button class="pay-alt">Карткою онлайн</button>
+  </div>
+  <div class="disclaimer">Продовжуючи, ви приймаєте <a>Правила сервісу</a></div>
+</div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Варіант B — готово до оплати</div>
+</div><div style="align-self:center;padding-bottom:20px;color:#D1D1D6;font-size:22px;line-height:1;flex-shrink:0">›</div></div><div style="position:absolute;bottom:10px;right:24px;font-size:8px;color:#C7C7CC">Expirenza · monobank · 2026</div></div>
+<div class="pg"><div style="background:#3A3A3C;padding:14px 28px 12px;flex-shrink:0"><div style="font-size:15px;font-weight:700;color:white;margin-bottom:2px">Варіант B  ·  Оплата та подяка</div><div style="font-size:10px;color:rgba(255,255,255,.65)">Екран успішної оплати без донату · Лояльність</div></div><div style="display:flex;align-items:flex-start;justify-content:center;gap:10px;padding:16px 24px 0"><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div class="succ-wrap">
+    <div class="succ-ico">✓</div>
+    <div class="succ-ttl">Оплату здійснено!</div>
+    <div class="succ-sub">Дякуємо за відвідування</div>
+    <div class="succ-card"><div class="srow"><span class="srl">Рахунок</span><span class="srv ">1 300 ₴</span></div><div class="srow"><span class="srl">Чайові</span><span class="srv p">+130 ₴</span></div><div class="srow"><span class="srl">Разом</span><span class="srv ">1 430 ₴</span></div></div>
+    <button class="done-b">Готово</button>
+  </div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Дякуємо — без донату</div>
+</div><div style="align-self:center;padding-bottom:20px;color:#D1D1D6;font-size:22px;line-height:1;flex-shrink:0">›</div><div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div style="width:298px;height:564px;overflow:hidden;border-radius:15px;
+              border:.5px solid #E5E5EA;box-shadow:0 4px 24px rgba(0,0,0,.10)">
+    <div style="transform:scale(0.83);transform-origin:top left;width:360px;height:680px">
+      <div class="ph">
+  <div style="text-align:center;padding:18px 16px 10px;flex-shrink:0">
+    <div style="font-size:36px;margin-bottom:6px">🎉</div>
+    <div style="font-size:20px;font-weight:700;color:var(--et1)">Дякуємо!</div>
+    <div style="font-size:12px;color:var(--et2);margin-top:3px">Ваші бонуси за цей візит</div>
+  </div>
+  <div class="scrl" style="padding-top:0">
+    <div class="lcard">
+      <div class="lcard-h"><span style="font-size:22px">🏦</span><div><div class="lcard-nm">monobank кешбек</div><div class="lcard-ds">Нараховано на картку</div></div></div>
+      <div class="cb-box"><div class="cb-amt">26 ₴</div><div class="cb-lbl">2% від суми оплати</div></div>
+    </div>
+    <div class="lcard">
+      <div class="lcard-h"><span style="font-size:22px">🍽️</span><div><div class="lcard-nm">Expirenza Stamps</div><div class="lcard-ds">Ще 2 відвідування — кава у подарунок</div></div></div>
+      <div class="stamps"><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmpf">✓</div><div class="stmp"></div><div class="stmp"></div></div>
+      <div style="font-size:11px;color:var(--et2);margin-top:7px">8 з 10 штампів</div>
+    </div>
+  </div>
+  <div style="padding:4px 14px 18px;flex-shrink:0">
+    <button class="done-b" style="background:var(--ep)">Забронювати столик</button>
+  </div>
+</div>
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;color:#1C1C1E;text-align:center;max-width:298px;line-height:1.3">Бонуси і лояльність</div>
+</div></div><div style="position:absolute;bottom:10px;right:24px;font-size:8px;color:#C7C7CC">Expirenza · monobank · 2026</div></div>
+</body>
+</html>

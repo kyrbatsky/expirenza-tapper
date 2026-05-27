@@ -1,0 +1,660 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,700;0,6..12,800&display=swap');
+:root{--ep:#6638DD;--ebg:#EDEAF8;--ecard:#FFFFFF;--et1:#030712;--et2:#6B7281;--ebrd:#D1D5DB;--echip:#E5E7EB}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:linear-gradient(145deg,#1A0B3D 0%,#0D0620 100%);min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:20px;font-family:'Nunito Sans',sans-serif}
+.ph{width:360px;background:linear-gradient(160deg,#EDEAF8 0%,#E6E2F5 100%);overflow:hidden;display:flex;flex-direction:column;border-radius:36px;box-shadow:0 20px 60px rgba(0,0,0,.18);min-height:700px}
+.scrl{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px 12px 8px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);overflow:hidden;flex-shrink:0}
+.rh{padding:16px 16px 14px}
+.rh-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.rh-table{font-size:13px;color:var(--et2);font-weight:400}
+.rh-split{font-size:13px;font-weight:600;color:var(--ep);cursor:pointer}
+.rh-amt{display:flex;align-items:center;justify-content:space-between;margin-top:2px}
+.rh-label{font-size:18px;font-weight:800;color:var(--et1)}
+.rh-total{font-size:20px;font-weight:800;color:var(--et1);letter-spacing:-.3px}
+.rec-expand{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px 12px;border-top:.5px solid var(--ebrd);cursor:pointer;user-select:none;transition:background .12s}
+.rec-expand:active{background:var(--echip)}
+.rec-expand-txt{font-size:13px;font-weight:600;color:var(--ep)}
+.rec-expand-pill{background:var(--echip);border-radius:50px;padding:3px 10px 3px 8px;font-size:12px;font-weight:600;color:var(--ep);display:flex;align-items:center;gap:4px;transition:background .2s,color .2s}
+.rec-body{overflow:hidden;max-height:0;transition:max-height .35s ease}
+.rdots{display:flex;gap:6px;justify-content:center;padding:8px 0 10px}
+.rdot{width:6px;height:6px;border-radius:50%;background:var(--ebrd);cursor:pointer;transition:all .2s}
+.rdot.a{background:var(--ep);width:18px;border-radius:50px}
+.ri{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px}
+.ri-n{font-size:15px;color:var(--et1);flex:1;line-height:1.4;padding-right:12px}.ri-p{font-size:15px;font-weight:700;color:var(--et1);white-space:nowrap}
+.torn{display:block;width:100%;height:12px}
+.tcard{padding:14px 14px 12px;flex-shrink:0}
+.waiter-row{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#9070EE,#6638DD);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;box-shadow:0 0 0 2px white,0 0 0 3.5px var(--ep)}
+.wnm{font-size:15px;font-weight:700;color:var(--et1)}
+.wrl{font-size:11px;color:var(--et2);margin-top:1px}
+.proof{font-size:11px;color:#34C759;font-weight:600;margin-bottom:12px;padding-left:46px}
+.seg-wrap{display:flex;align-items:center;width:100%}
+/* back-btn: display:none guarantees ZERO space in layout */
+.back-btn{display:none;width:40px;height:40px;flex-shrink:0;border-radius:50%;background:var(--echip);border:none;align-items:center;justify-content:center;cursor:pointer;margin-right:8px;opacity:0;transition:opacity .2s}
+.back-btn.visible{display:flex;opacity:1}
+.back-btn svg{width:18px;height:18px}
+.sw{position:relative;background:var(--echip);border-radius:50px;padding:3px;display:flex;flex:1;overflow:hidden;border:1.5px solid transparent;min-height:58px;transition:background .25s,border-color .25s}
+.sw.imode{background:var(--ecard);border-color:var(--ep)}
+.sind{position:absolute;top:3px;height:calc(100% - 6px);background:var(--ep);border-radius:50px;pointer-events:none;transition:left .22s,width .22s,opacity .18s}
+.so,.cso{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 2px;position:relative;z-index:1;cursor:pointer;overflow:hidden;white-space:nowrap;min-width:0;text-align:center;transition:flex .28s ease,opacity .2s ease}
+.so.collapsed{flex:0;opacity:0;pointer-events:none}
+.sp,.cp{font-size:15px;font-weight:700;color:var(--et2);transition:color .15s}
+.sa,.cs{font-size:11px;color:var(--et2);transition:color .15s}
+.so.act .sp,.so.act .sa{color:#fff}
+.tip-cur{width:2px;height:18px;background:var(--ep);display:none;animation:blink 1s step-end infinite;border-radius:1px;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.ok-btn{background:var(--ep);border:none;border-radius:46px;font-size:13px;font-weight:700;color:white;cursor:pointer;flex-shrink:0;display:none;padding:8px 14px;white-space:nowrap}
+.ok-btn.visible{display:flex;align-items:center}
+.sw.imode .cso{flex-direction:row;align-items:center;justify-content:center;padding:0 6px 0 14px;gap:6px}
+.sw.imode .cp{font-size:17px;color:var(--et1)}
+.sw.imode .cs{display:none}
+.skip{text-align:center;color:var(--et2);font-size:12px;padding:7px 0 2px;cursor:pointer;opacity:.7}
+.charity-wrap{overflow:hidden;max-height:0;transition:opacity .6s cubic-bezier(0.22,1,0.36,1),transform .6s cubic-bezier(0.22,1,0.36,1);opacity:0;transform:translateY(12px)}
+.charity-wrap.visible{opacity:1;transform:translateY(0)}
+.charity-wrap .card{border-radius:24px;box-shadow:0px 3px 6px rgba(0,0,0,0.04)}
+.ch-hdr{padding:13px 14px 8px}
+.ch-ttl{font-size:15px;font-weight:700;color:var(--et1)}
+.ch-bd{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}
+.ch-org{display:flex;align-items:center;gap:10px;padding:4px 0 2px}
+.ch-nm{font-size:13px;font-weight:600;color:var(--et1)}
+.ch-ds{font-size:11px;color:var(--et2);margin-top:1px}
+.cnt-wrap{display:flex;align-items:center;gap:10px;padding:2px 0 4px}
+.cnt-avas{display:flex;align-items:center}
+.cnt-ava{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--ecard);margin-left:-5px;font-size:8px;font-weight:700;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cnt-ava:first-child{margin-left:0}
+.cnt-txt{flex:1}
+.cnt-num{font-size:11px;font-weight:700;color:var(--et1)}
+.cnt-lbl{font-size:10px;color:var(--et2);margin-top:1px}
+.cnt-dot{width:7px;height:7px;border-radius:50%;background:#34C759;flex-shrink:0;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.ch-div{height:.5px;background:var(--ebrd)}
+.ftr{background:var(--ecard);border-top:.5px solid var(--ebrd);padding:12px 14px 20px;flex-shrink:0}
+.tot-r{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.tot-l{font-size:14px;color:var(--et2)}
+.tot-right{display:flex;align-items:baseline;position:relative}
+.tot-v{font-size:22px;font-weight:700;color:var(--et1)}
+.tot-delta{font-size:13px;font-weight:700;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s;white-space:nowrap;position:absolute;right:0;top:-26px;padding:4px 11px;border-radius:20px}
+.tot-delta.show{opacity:1;transform:translateY(0)}
+.pay-mono{width:100%;background:var(--et1);color:white;border:none;border-radius:999px;padding:15px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px}
+.pay-row{display:flex;gap:10px;margin-top:10px}
+.pay-alt{flex:1;background:var(--ecard);color:var(--et1);border:.5px solid var(--ebrd);border-radius:999px;padding:13px 8px;font-size:14px;font-weight:600;text-align:center;cursor:pointer}
+.disclaimer{text-align:center;font-size:11px;color:var(--et2);margin-top:10px}
+.disclaimer span{color:var(--ep)}
+.si-row{display:flex;align-items:center;padding:14px;gap:10px;cursor:pointer;transition:background .1s}
+.si-row:active{background:var(--echip)}
+.si-row+.si-row{border-top:.5px solid var(--ebrd)}
+.si-row.sel{background:#F3EEFF}
+.si-nm{font-size:14px;color:var(--et1);flex:1;line-height:1.35}
+.si-pr{font-size:14px;font-weight:700;color:var(--et1);white-space:nowrap;margin-right:10px}
+.si-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--ebrd);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--et2);flex-shrink:0;background:var(--ecard);transition:all .15s}
+.si-row.sel .si-btn{background:var(--ep);border-color:var(--ep);color:white;font-size:13px}
+.split-ftr-btn{width:100%;border:none;border-radius:999px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;transition:background .2s,color .2s}
+.split-ftr-btn.empty{background:var(--echip);color:var(--et2);cursor:default}
+.split-ftr-btn.ready{background:var(--ep);color:white}
+.succ-wrap{flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 18px 20px}
+.succ-ico{width:72px;height:72px;border-radius:50%;background:#34C759;display:flex;align-items:center;justify-content:center;font-size:30px;color:white;margin-bottom:16px;animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.succ-ttl{font-size:22px;font-weight:700;color:var(--et1);margin-bottom:6px}
+.succ-sub{font-size:13px;color:var(--et2);margin-bottom:22px;text-align:center}
+.succ-card{width:100%;background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);margin-bottom:16px}
+.srow{display:flex;justify-content:space-between;padding:11px 16px}
+.srow+.srow{border-top:.5px solid var(--ebrd)}
+.srl{font-size:13px;color:var(--et2)}
+.srv{font-size:13px;font-weight:600;color:var(--et1)}
+.srv.p{color:var(--ep)}
+.done-b{width:100%;background:var(--ep);color:white;border:none;border-radius:999px;padding:14px;font-size:15px;font-weight:700;cursor:pointer}
+.lcard{background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);padding:14px;flex-shrink:0}
+.cb-box{background:var(--echip);border-radius:12px;padding:12px;text-align:center}
+.cb-amt{font-size:26px;font-weight:700;color:var(--ep)}
+.cb-lbl{font-size:11px;color:var(--et2);margin-top:2px}
+.stamps{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.stmp{width:34px;height:34px;border-radius:50%;background:var(--echip);border:1.5px solid var(--ebrd);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--et2)}
+.stmp.f{background:var(--ep);border-color:var(--ep);color:white}
+.cb-a{background:transparent;border-radius:0;padding:8px 0 2px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;position:relative}
+.cb-a-left{display:flex;align-items:center;gap:8px}
+.cb-a-text{display:flex;flex-direction:column;gap:1px}
+.cb-a-label{font-size:12px;color:var(--et2);font-weight:600}
+.cb-a-sub{font-size:11px;color:var(--et2);opacity:.7}
+.cb-a-right{display:flex;align-items:center;gap:8px}
+.cb-a-amt{font-size:20px;font-weight:800;color:#1A7A3C}
+.cb-a-amt.pop{animation:popCb .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popCb{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+.cb-a-delta{position:absolute;right:56px;top:-22px;font-size:12px;font-weight:700;color:#1A7A3C;background:#b8f3ce;padding:2px 8px;border-radius:20px;opacity:0;pointer-events:none;white-space:nowrap}
+.cb-a-delta.show{animation:floatCb .9s ease forwards}
+@keyframes floatCb{0%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(-8px)}100%{opacity:0;transform:translateY(-14px)}}
+.mono-badge{background:var(--et1);color:white;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;letter-spacing:-.2px;white-space:nowrap}
+.ms-top{background:var(--ecard);padding:22px 16px 16px;text-align:center;flex-shrink:0}
+.ms-logo{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#3a8fa3,#2e6f80);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.ms-logo-txt{font-size:8px;font-weight:800;color:white;text-align:center;line-height:1.2;letter-spacing:.3px}
+.ms-paid{font-size:22px;font-weight:800;color:var(--et1);margin-bottom:4px}
+.ms-date{font-size:11px;color:var(--et2);margin-bottom:6px}
+.ms-receipt{font-size:12px;font-weight:700;color:var(--ep);cursor:pointer;display:inline-block;padding:2px 0;text-decoration:none}
+.ms-don{margin:10px 12px 0;border-radius:14px;padding:12px 14px;position:relative;overflow:hidden;flex-shrink:0}
+.ms-don::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#1572E4 0%,#1572E4 43%,#FFD800 60%,#FFD800 100%);opacity:.13;border-radius:14px;pointer-events:none}
+.ms-don-inner{position:relative;z-index:1;display:flex;align-items:center;gap:10px}
+.ms-don-ttl{font-size:13px;font-weight:800;color:var(--et1);margin-bottom:2px}
+.ms-don-sub{font-size:11px;color:var(--et2)}
+.ms-cb-row{display:flex;justify-content:center;padding:10px 12px 0}
+.ms-cb-pill{display:inline-flex;align-items:center;gap:6px;background:#EDFAF3;border:.5px solid #b8f3ce;border-radius:99px;padding:5px 12px}
+.ms-cb-txt{font-size:11px;font-weight:700;color:#1A6B3C}
+.ms-cb-badge{background:var(--et1);color:white;font-size:9px;font-weight:800;padding:1px 6px;border-radius:99px;margin-left:2px}
+.ms-rev{background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);margin:10px 12px 0;padding:16px;flex-shrink:0}
+.ms-rev-ttl{font-size:14px;font-weight:800;color:var(--et1);text-align:center;margin-bottom:16px;line-height:1.3}
+.ms-stars{display:flex;justify-content:center;gap:4px;margin-bottom:16px}
+.ms-star{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex:1;user-select:none}
+.ms-star-ico{font-size:28px;color:var(--ebrd);transition:color .15s;line-height:1;display:block;text-align:center}
+.ms-star-ico.on{color:var(--ep)}
+.ms-star-lbl{font-size:9px;color:var(--et2);font-weight:600;text-align:center;white-space:nowrap}
+.ms-comment{width:100%;background:var(--echip);border:.5px solid var(--ebrd);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--et1);font-family:'Nunito Sans',sans-serif;resize:none;outline:none;height:60px;display:block;margin-bottom:10px}
+.ms-comment::placeholder{color:#9CA3AF}
+.ms-comment:focus{border-color:var(--ep);background:var(--ecard)}
+.ms-send-row{display:flex;gap:8px;align-items:center}
+.ms-cam{width:42px;height:42px;border-radius:12px;background:var(--echip);border:.5px solid var(--ebrd);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;cursor:pointer}
+.ms-send{flex:1;background:var(--ep);color:white;border:none;border-radius:999px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito Sans',sans-serif;opacity:.45;transition:opacity .2s}
+.ms-send.active{opacity:1}
+.ms-book{background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);margin:8px 12px 0;padding:12px 14px;flex-shrink:0}
+.ms-book-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ms-book-ttl{font-size:13px;font-weight:800;color:var(--et1)}
+.ms-book-sub{font-size:10px;color:var(--et2);margin-top:1px}
+.ms-slots{display:flex;gap:6px}
+.ms-slot{flex:1;background:#F3EEFF;border-radius:10px;padding:7px 4px;text-align:center;cursor:pointer;border:.5px solid transparent;transition:all .15s}
+.ms-slot.sel{background:#EDE9FE;border-color:var(--ep)}
+.ms-slot-day{font-size:9px;color:var(--et2);font-weight:600}
+.ms-slot-time{font-size:11px;font-weight:800;color:var(--ep);margin-top:2px}
+.ms-ftr{background:var(--ecard);border-top:.5px solid var(--ebrd);margin-top:8px;padding:10px 14px 20px;flex-shrink:0}
+.ms-book-btn{width:100%;background:var(--ep);color:white;border:none;border-radius:999px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;font-family:'Nunito Sans',sans-serif}
+.ms-close{text-align:center;font-size:12px;color:var(--et2);cursor:pointer;font-weight:600}
+
+/* Sequential reveal — shared between main & success screens */
+.ms-reveal,.main-reveal{opacity:0;transform:translateY(12px);transition:opacity .6s cubic-bezier(0.22,1,0.36,1),transform .6s cubic-bezier(0.22,1,0.36,1)}
+.ms-reveal.ms-show,.main-reveal.main-show{opacity:1;transform:translateY(0)}
+
+/* Cashback card — dark mono style */
+.ms-cb-card{margin:10px 12px 0;border-radius:18px;background:linear-gradient(140deg,#12101E 0%,#1C1435 55%,#0D0B1A 100%);padding:18px 18px 16px;position:relative;overflow:hidden;flex-shrink:0}
+.ms-cb-glow{position:absolute;top:-50px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(102,56,221,.38) 0%,transparent 68%);pointer-events:none}
+.ms-cb-glow2{position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;background:radial-gradient(circle,rgba(26,122,60,.2) 0%,transparent 70%);pointer-events:none}
+.ms-cb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.ms-cb-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.38);letter-spacing:1.4px;text-transform:uppercase}
+.ms-cb-badge3{background:rgba(255,255,255,.1);border:.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.7);font-size:9px;font-weight:800;padding:3px 9px;border-radius:99px;letter-spacing:.6px}
+.ms-cb-amount{display:flex;align-items:baseline;gap:4px;margin-bottom:3px}
+.ms-cb-plus{font-size:22px;font-weight:800;color:rgba(255,255,255,.4);margin-right:2px}
+.ms-cb-num{font-size:42px;font-weight:800;color:white;letter-spacing:-2px;line-height:1}
+.ms-cb-cur{font-size:22px;font-weight:700;color:rgba(255,255,255,.55)}
+.ms-cb-sub2{font-size:11px;color:rgba(255,255,255,.38);font-weight:600;margin-bottom:18px;letter-spacing:.2px}
+.ms-cb-footer{display:flex;justify-content:space-between;align-items:center}
+.ms-cb-dots{display:flex;gap:12px;align-items:center}
+.ms-cb-dot-g{display:flex;gap:3px}
+.ms-cb-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.2)}
+.ms-cb-mono-logo{font-size:13px;font-weight:800;color:rgba(255,255,255,.5);letter-spacing:.5px}
+
+/* Epilogue — booking notification preview */
+.ms-rev-form{transition:opacity .3s ease}
+.ms-rev-sent{display:none;animation:msEpiFadeIn .4s ease forwards}
+@keyframes msEpiFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ms-rev-sent-ico{font-size:30px;margin-bottom:8px;text-align:center}
+.ms-rev-sent-ttl{font-size:16px;font-weight:800;color:var(--et1);margin-bottom:3px;text-align:center}
+.ms-rev-sent-sub{font-size:12px;color:var(--et2);margin-bottom:14px;text-align:center;line-height:1.5}
+.ms-epi-notif{background:#F3EEFF;border-radius:14px;padding:12px 14px;margin-bottom:8px;border:.5px solid #DDD6FE}
+.ms-epi-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.ms-epi-icon-wrap{width:30px;height:30px;border-radius:9px;background:var(--ep);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ms-epi-app-name{font-size:11px;font-weight:800;color:var(--et1);flex:1}
+.ms-epi-time{font-size:10px;color:var(--et2);white-space:nowrap}
+.ms-epi-body{font-size:12px;color:var(--et1);line-height:1.45;padding-left:38px;font-weight:600}
+.ms-epi-hint{font-size:10px;color:var(--et2);text-align:center;line-height:1.4}
+</style>
+
+<div class="ph">
+
+<!-- ══════════════════════════════════
+     ZERO PAGE — QR landing
+════════════════════════════════════ -->
+<div id="zeroView" style="display:flex;flex-direction:column;flex:1;position:relative;overflow:hidden">
+  <!-- Смугастий фон -->
+  <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#4E8FA3 0px,#4E8FA3 22px,#6AABBE 22px,#6AABBE 44px)"></div>
+  <!-- Картка -->
+  <div style="position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px 20px 32px">
+    <div style="background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12)">
+
+      <!-- Хедер: лого + назва + стіл -->
+      <div style="padding:28px 24px 20px;text-align:center">
+        <div style="width:64px;height:64px;border-radius:50%;background:#5B96A8;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px">
+          <span style="font-size:9px;font-weight:800;color:white;text-align:center;letter-spacing:.5px;line-height:1.3">G ×<br>MILK BAR</span>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:#030712;margin-bottom:4px">G×Milk bar</div>
+        <div style="font-size:15px;color:#6B7281;font-weight:600">Стіл №7</div>
+      </div>
+
+      <!-- Роздільник -->
+      <div style="height:.5px;background:#D1D5DB;margin:0 20px"></div>
+
+      <!-- Пункти меню -->
+      <div style="padding:8px 0 12px">
+
+        <!-- Переглянути меню -->
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer" onclick="">
+          <div style="width:48px;height:48px;border-radius:50%;background:#6638DD;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 10h16M4 14h10" stroke="white" stroke-width="2.2" stroke-linecap="round"/><rect x="3" y="3" width="18" height="18" rx="2" stroke="white" stroke-width="2" fill="none"/></svg>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:800;color:#030712">Переглянути меню</div>
+          </div>
+        </div>
+
+        <!-- Роздільник -->
+        <div style="height:.5px;background:#F3F4F6;margin:0 20px"></div>
+
+        <!-- Оплатити рахунок — головна дія -->
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer" onclick="showPayment()">
+          <div style="width:48px;height:48px;border-radius:50%;background:#6638DD;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="3" stroke="white" stroke-width="2"/><path d="M2 10h20" stroke="white" stroke-width="2"/><rect x="5" y="14" width="4" height="2" rx="1" fill="white"/></svg>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:800;color:#030712">Оплатити рахунок</div>
+          </div>
+        </div>
+
+        <!-- Роздільник -->
+        <div style="height:.5px;background:#F3F4F6;margin:0 20px"></div>
+
+        <!-- Залишити відгук -->
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer" onclick="">
+          <div style="width:48px;height:48px;border-radius:50%;background:transparent;border:2px solid #6638DD;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5" stroke="#6638DD" stroke-width="2" stroke-linecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L13 14l-4 1 1-4 8.5-8.5z" stroke="#6638DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:800;color:#030712">Залишити відгук</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Powered by -->
+    <div style="text-align:center;margin-top:18px">
+      <span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:600">Powered by </span>
+      <span style="font-size:11px;color:white;font-weight:800">Expirenza</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     MAIN PAYMENT VIEW
+════════════════════════════════════ -->
+<div id="mainView" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+  <div class="scrl">
+    <div class="card main-reveal" id="mainBlockReceipt">
+      <div class="rh">
+        <div class="rh-meta"><span class="rh-table">Стіл №7 · 3 гості</span><span class="rh-split" onclick="showSplit()">Розділити ›</span></div>
+        <div class="rh-amt"><span class="rh-label">До сплати</span><span class="rh-total" id="recTotal">1 300 ₴</span></div>
+      </div>
+      <div style="height:.5px;background:var(--ebrd);margin:0 16px"></div>
+      <div class="rec-expand" id="recToggle">
+        <span class="rec-expand-txt">Склад замовлення</span>
+        <span class="rec-expand-pill"><span>6 позицій</span><span id="chev">▼</span></span>
+      </div>
+      <div class="rec-body" id="recBody">
+        <div class="ri"><span class="ri-n">1 х Креветочні чіпси</span><span class="ri-p">100 ₴</span></div>
+        <div class="ri"><span class="ri-n">1 х Салат зі свинячими вухами</span><span class="ri-p">300 ₴</span></div>
+        <div class="ri"><span class="ri-n">1 х Тарган мадагаскарський</span><span class="ri-p">120 ₴</span></div>
+        <div class="ri"><span class="ri-n">1 х Столітні яйця в імбирному соусі</span><span class="ri-p">280 ₴</span></div>
+        <div class="ri"><span class="ri-n">1 х Кокос</span><span class="ri-p">120 ₴</span></div>
+        <div class="ri"><span class="ri-n">1 х Нільський окунь</span><span class="ri-p">380 ₴</span></div>
+      </div>
+      <svg class="torn" viewBox="0 0 360 12" preserveAspectRatio="none"><path d="M0,6 L8,12 L16,6 L24,12 L32,6 L40,12 L48,6 L56,12 L64,6 L72,12 L80,6 L88,12 L96,6 L104,12 L112,6 L120,12 L128,6 L136,12 L144,6 L152,12 L160,6 L168,12 L176,6 L184,12 L192,6 L200,12 L208,6 L216,12 L224,6 L232,12 L240,6 L248,12 L256,6 L264,12 L272,6 L280,12 L288,6 L296,12 L304,6 L312,12 L320,6 L328,12 L336,6 L344,12 L352,6 L360,12 L360,12 L0,12 Z" fill="var(--ebg)"/></svg>
+    </div>
+
+    <div class="rdots" style="padding:6px 0 2px">
+      <div class="rdot a" onclick="switchR(0)"></div>
+      <div class="rdot" onclick="switchR(1)"></div>
+      <div class="rdot" onclick="switchR(2)"></div>
+    </div>
+
+    <div class="card tcard main-reveal" id="mainBlockTips">
+      <div class="waiter-row">
+        <div class="avatar">АН</div>
+        <div><div class="wnm">Чайові для Анни</div><div class="wrl">Офіціант вашого столу</div></div>
+      </div>
+      <div class="proof">9 з 10 гостей залишають чайові Анні</div>
+      <div style="position:relative;padding-top:18px">
+      <span id="tipHint" style="position:absolute;top:2px;font-size:11px;color:var(--et2);transform:translateX(-50%);left:50%;white-space:nowrap;pointer-events:none">найчастіше</span>
+      <div class="seg-wrap">
+        <button class="back-btn" id="backBtn" onclick="resetTips()">
+          <svg viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9L11 14" stroke="#6638DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="sw" id="tipSw">
+          <div class="sind" id="tipInd" style="width:0;opacity:0"></div>
+          <div class="so" id="t0" onclick="pickTip(0,this)"><span class="sp">5%</span><span class="sa">65 ₴</span></div>
+          <div class="so" id="t1" onclick="pickTip(1,this)"><span class="sp">10%</span><span class="sa">130 ₴</span></div>
+          <div class="so" id="t2" onclick="pickTip(2,this)"><span class="sp">15%</span><span class="sa">195 ₴</span></div>
+          <div class="cso" id="tipCustom" onclick="activateCustom()">
+            <span class="cp" id="cpTxt">Інша</span>
+            <span class="cs" id="csTxt">сума</span>
+            <span class="tip-cur" id="tipCur"></span>
+            <button class="ok-btn" id="okBtn" onclick="confirmCustom(event)">Ок</button>
+          </div>
+        </div>
+      </div>
+      </div>
+      <div class="skip" onclick="skipTips()">Може, іншого разу</div>
+      <div id="thankToast" style="text-align:center;font-size:13px;font-weight:600;color:var(--ep);max-height:0;overflow:hidden;opacity:0;transition:opacity .25s,max-height .3s,padding .3s;padding:0">Дякуємо, Анна цінує! ❤️</div>
+    </div>
+
+    <div class="charity-wrap" id="charityWrap">
+      <div class="card">
+        <div class="ch-hdr"><div class="ch-ttl">🇺🇦 Підтримка наших захисників</div></div>
+        <div class="ch-bd">
+          <div class="ch-org">
+            <div><div class="ch-nm">БФ «Повернись живим»</div><div class="ch-ds">Кожна гривня може врятувати життя</div></div>
+          </div>
+          <div class="cnt-wrap">
+            <div class="cnt-avas">
+              <div class="cnt-ava" style="background:#FF6B6B">МА</div>
+              <div class="cnt-ava" style="background:#4ECDC4">ОВ</div>
+              <div class="cnt-ava" style="background:#45B7D1">ТН</div>
+              <div class="cnt-ava" style="background:#96CEB4">ІС</div>
+              <div class="cnt-ava" style="background:#DDA0DD">+</div>
+            </div>
+            <div class="cnt-txt">
+              <div class="cnt-num">Приєднайтесь до <span id="cnt">1 247</span> гостей</div>
+              <div class="cnt-lbl">які вже долучились цього місяця</div>
+            </div>
+            <div class="cnt-dot"></div>
+          </div>
+          <div class="ch-div"></div>
+          <div class="sw" id="donSw" style="margin-top:2px">
+            <div class="sind" id="donInd" style="width:0;opacity:0"></div>
+            <div class="so" onclick="pickDon(0,this)"><span class="sp">25 ₴</span><span class="sa">підтримка</span></div>
+            <div class="so" onclick="pickDon(1,this)"><span class="sp">50 ₴</span><span class="sa">від серця</span></div>
+            <div class="so" onclick="pickDon(2,this)"><span class="sp">100 ₴</span><span class="sa">героям</span></div>
+          </div>
+          <div class="skip" onclick="skipDon()">Пропустити</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ftr">
+    <div class="tot-r">
+      <span class="tot-l">До оплати</span>
+      <div class="tot-right"><div class="tot-delta" id="totDelta"></div><span class="tot-v" id="tot">1 300 ₴</span></div>
+    </div>
+    <div class="cb-a" id="cbHook">
+      <div class="cb-a-left">
+        <span style="font-size:16px">💳</span>
+        <div class="cb-a-text">
+          <div class="cb-a-label">Кешбек на картку</div>
+          <div class="cb-a-sub">5% від усієї суми оплати</div>
+        </div>
+      </div>
+      <div class="cb-a-right">
+        <div style="position:relative">
+          <span class="cb-a-delta" id="cbDelta"></span>
+          <span class="cb-a-amt" id="cbAmt">65 ₴</span>
+        </div>
+        <div class="mono-badge">mono</div>
+      </div>
+    </div>
+    <button class="pay-mono" onclick="doPay()"><span style="font-weight:400;letter-spacing:-.3px">mono</span>&nbsp;<span style="font-weight:700">Pay</span></button>
+    <div class="pay-row">
+      <button class="pay-alt" onclick="doPay()">&#x2318; Pay</button>
+      <button class="pay-alt" onclick="doPay()">Карткою онлайн</button>
+    </div>
+    <div class="disclaimer">Продовжуючи, ви приймаєте <span>Правила сервісу</span></div>
+  </div>
+</div>
+
+<div id="splitView" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+  <div style="padding:18px 16px 14px;flex-shrink:0;background:var(--ebg)">
+    <button onclick="hideSplit()" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--ep);font-size:16px;font-weight:600;cursor:pointer;padding:0;margin-bottom:12px">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9L11 14" stroke="#6638DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Назад
+    </button>
+    <div style="font-size:22px;font-weight:700;color:var(--et1)">Розділення рахунку</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+      <div style="display:flex;align-items:center">
+        <div style="width:28px;height:28px;border-radius:50%;background:#FF6B6B;border:2px solid var(--ebg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">АН</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#4ECDC4;border:2px solid var(--ebg);margin-left:-7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">ПВ</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#FFB347;border:2px solid var(--ebg);margin-left:-7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">ОМ</div>
+      </div>
+      <span style="font-size:13px;color:var(--et2)">зараз обирають позиції</span>
+    </div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:0 12px 8px">
+    <div class="card">
+      <div class="si-row" data-price="100" onclick="toggleSplit(this)"><span class="si-nm">Креветочні чіпси</span><span class="si-pr">100 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="300" onclick="toggleSplit(this)"><span class="si-nm">Салат зі свинячими вухами, морквою та болгарським перцем</span><span class="si-pr">300 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="120" onclick="toggleSplit(this)"><span class="si-nm">Тарган мадагаскарський</span><span class="si-pr">120 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="280" onclick="toggleSplit(this)"><span class="si-nm">Столітні яйця в імбирному соусі</span><span class="si-pr">280 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="120" onclick="toggleSplit(this)"><span class="si-nm">Кокос</span><span class="si-pr">120 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="380" onclick="toggleSplit(this)"><span class="si-nm">Нільський окунь в китайській панірівці зі спеціями</span><span class="si-pr">380 ₴</span><div class="si-btn">+</div></div>
+    </div>
+  </div>
+  <div class="ftr"><button class="split-ftr-btn empty" id="splBtn">Спочатку оберіть позиції</button></div>
+</div>
+
+<div id="mergedSuccessView" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+  <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column" id="msScroll">
+
+    <!-- 1. Оплата — з'являється одразу -->
+    <div class="ms-top ms-reveal" id="msBlockTop">
+      <div class="ms-logo"><div class="ms-logo-txt">MILK<br>BAR</div></div>
+      <div class="ms-paid" id="msPaid">Сплачено 1 300 ₴</div>
+      <div class="ms-date" id="msDate"></div>
+      <a class="ms-receipt" href="#" onclick="return false">Отримати квитанцію про оплату</a>
+    </div>
+
+    <!-- 2. Донат — з'являється якщо є, з затримкою -->
+    <div class="ms-don ms-reveal" id="msDon" style="display:none">
+      <div class="ms-don-inner">
+        <div>
+          <div class="ms-don-ttl">Велика дяка вам за "бойові"!</div>
+          <div class="ms-don-sub" id="msDonSub">50 ₴ відправлено захисникам</div>
+        </div>
+        <span style="font-size:22px">💛💙</span>
+      </div>
+    </div>
+
+    <!-- 3. Кешбек — велика картка -->
+    <div class="ms-cb-card ms-reveal" id="msBlockCb">
+      <div class="ms-cb-glow"></div>
+      <div class="ms-cb-glow2"></div>
+      <div class="ms-cb-top">
+        <span class="ms-cb-label">Кешбек</span>
+        <span class="ms-cb-badge3">mono</span>
+      </div>
+      <div class="ms-cb-amount">
+        <span class="ms-cb-plus">+</span>
+        <span class="ms-cb-num" id="msCbAmt">65</span>
+        <span class="ms-cb-cur">₴</span>
+      </div>
+      <div class="ms-cb-sub2">нараховано на вашу картку • 5% від суми</div>
+      <div class="ms-cb-footer">
+        <div class="ms-cb-dots">
+          <div class="ms-cb-dot-g"><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div></div>
+          <div class="ms-cb-dot-g"><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div></div>
+          <div class="ms-cb-dot-g"><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div></div>
+          <div class="ms-cb-dot-g" style="opacity:.5"><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot" style="background:rgba(255,255,255,.5)"></div><div class="ms-cb-dot" style="background:rgba(255,255,255,.5)"></div></div>
+        </div>
+        <span class="ms-cb-mono-logo">mono</span>
+      </div>
+    </div>
+
+    <!-- 4. Відгук -->
+    <div class="ms-rev ms-reveal" id="msBlockRev">
+      <div class="ms-rev-form" id="msRevForm">
+        <div class="ms-rev-ttl">Вам сподобалося у<br>нашому закладі?</div>
+        <div class="ms-stars" id="msStars">
+          <div class="ms-star" data-i="0"><span class="ms-star-ico">★</span><span class="ms-star-lbl">Жахливо</span></div>
+          <div class="ms-star" data-i="1"><span class="ms-star-ico">★</span><span class="ms-star-lbl">Погано</span></div>
+          <div class="ms-star" data-i="2"><span class="ms-star-ico">★</span><span class="ms-star-lbl">Добре</span></div>
+          <div class="ms-star" data-i="3"><span class="ms-star-ico">★</span><span class="ms-star-lbl">Чудово</span></div>
+        </div>
+        <textarea class="ms-comment" id="msComment" placeholder="Коментар"></textarea>
+        <div class="ms-send-row">
+          <div class="ms-cam">📷</div>
+          <button class="ms-send" id="msSend">Надіслати</button>
+        </div>
+      </div>
+      <!-- Epilogue — після позитивного відгуку -->
+      <div class="ms-rev-sent" id="msRevSent">
+        <div class="ms-rev-sent-ico">🎉</div>
+        <div class="ms-rev-sent-ttl">Дякуємо за відгук!</div>
+        <div class="ms-rev-sent-sub">Ми цінуємо вашу думку<br>і будемо ще кращими</div>
+        <div style="text-align:center;margin-top:16px;padding-bottom:4px">
+          <div onclick="resetAll()" style="display:inline-block;font-size:13px;font-weight:700;color:var(--et2);cursor:pointer;padding:8px 24px;border-radius:99px;background:var(--echip)">Закрити</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+var tipIdx=-1,donIdx=-1,charityRevealed=false,deltaTimer=null;
+var tipAmts=[65,130,195,0],donAmts=[25,50,100];
+var customAmt=0,customActive=false,typingTimer=null,splTotal=0;
+function calcTotal(){var t=tipIdx===3?customAmt:(tipIdx>=0?tipAmts[tipIdx]:0);var d=donIdx>=0?donAmts[donIdx]:0;return 1300+t+d;}
+function showDelta(a,type){var el=document.getElementById('totDelta');if(deltaTimer)clearTimeout(deltaTimer);if(type==='don'){el.style.background='#EDFAF3';el.style.color='#1A6B3C';el.textContent='🇺🇦 +'+a+' ₴';}else{el.style.background='#FFF0F5';el.style.color='#B52A6B';el.textContent='♥ +'+a+' ₴';}el.classList.add('show');deltaTimer=setTimeout(function(){el.classList.remove('show');},900);}
+function updateCbHook(){var cb=Math.round(calcTotal()*0.05);var el=document.getElementById('cbAmt');if(!el)return;var prev=parseInt(el.textContent)||0;if(cb===prev)return;var delta=cb-prev;el.textContent=cb+' ₴';el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');el.addEventListener('animationend',function(){el.classList.remove('pop');},{once:true});if(delta>0){var d=document.getElementById('cbDelta');d.textContent='+'+delta+' ₴';d.classList.remove('show');void d.offsetWidth;d.classList.add('show');d.addEventListener('animationend',function(){d.classList.remove('show');},{once:true});}}
+function animateTotal(from,to){var el=document.getElementById('tot'),steps=12,step=(to-from)/steps,cur=from,i=0;var t=setInterval(function(){i++;cur+=step;el.textContent=Math.round(cur).toLocaleString('uk-UA').replace(/,/g,' ')+' ₴';if(i>=steps){el.textContent=to.toLocaleString('uk-UA').replace(/,/g,' ')+' ₴';clearInterval(t);}},18);}
+function pickTip(i,el){if(customActive)return;var prev=calcTotal();['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('act')});el.classList.add('act');tipIdx=i;var ind=document.getElementById('tipInd');ind.style.opacity='1';ind.style.left=el.offsetLeft+'px';ind.style.width=el.offsetWidth+'px';var next=calcTotal();if(next!==prev){animateTotal(prev,next);showDelta(tipAmts[i],'tip');}updateCbHook();revealCharity();}
+function activateCustom(){if(customActive)return;customActive=true;customAmt=0;if(typingTimer)clearInterval(typingTimer);['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('act');document.getElementById(id).classList.add('collapsed');});var ind=document.getElementById('tipInd');ind.style.opacity='0';ind.style.width='0';document.getElementById('tipSw').classList.add('imode');document.getElementById('cpTxt').textContent='';document.getElementById('csTxt').style.display='none';document.getElementById('tipCur').style.display='inline-block';document.getElementById('okBtn').classList.add('visible');document.getElementById('backBtn').classList.add('visible');var digits=['1','5','0'],di=0,str='';typingTimer=setInterval(function(){if(di>=digits.length){clearInterval(typingTimer);return;}str+=digits[di];di++;customAmt=parseInt(str);document.getElementById('cpTxt').textContent=str+' ₴';},320);}
+function confirmCustom(e){e.stopPropagation();if(typingTimer)clearInterval(typingTimer);if(!customAmt)return;document.getElementById('tipCur').style.display='none';document.getElementById('okBtn').classList.remove('visible');tipIdx=3;var prev=1300+(donIdx>=0?donAmts[donIdx]:0);var next=calcTotal();if(next!==prev){animateTotal(prev,next);showDelta(customAmt,'tip');}updateCbHook();revealCharity();}
+function resetTips(){if(typingTimer)clearInterval(typingTimer);customActive=false;customAmt=0;tipIdx=-1;['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('collapsed','act')});document.getElementById('tipSw').classList.remove('imode');document.getElementById('cpTxt').textContent='Інша';document.getElementById('csTxt').style.display='';document.getElementById('tipCur').style.display='none';document.getElementById('okBtn').classList.remove('visible');document.getElementById('backBtn').classList.remove('visible');var ind=document.getElementById('tipInd');ind.style.opacity='0';ind.style.width='0';animateTotal(calcTotal()+customAmt,calcTotal());}
+function skipTips(){if(customActive)return;['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('act')});document.getElementById('tipInd').style.opacity='0';document.getElementById('tipInd').style.width='0';tipIdx=-1;revealCharity();}
+var cntInterval=null;
+function startLiveCounter(){if(cntInterval)return;var el=document.getElementById('cnt');var cur=1247;function tick(){cur++;el.style.transition='color .3s';el.style.color='#34C759';el.textContent=cur.toLocaleString('uk-UA').replace(/,/g,' ');setTimeout(function(){el.style.color='';},700);cntInterval=setTimeout(tick,5000+Math.floor(Math.random()*4000));}cntInterval=setTimeout(tick,4000+Math.floor(Math.random()*3000));}
+function revealCharity(){if(charityRevealed)return;charityRevealed=true;var toast=document.getElementById('thankToast');var scrl=document.getElementById('mainView').querySelector('.scrl');toast.style.maxHeight='40px';toast.style.opacity='1';toast.style.padding='7px 0 3px';setTimeout(function(){toast.style.opacity='0';toast.style.maxHeight='0';toast.style.padding='0';setTimeout(function(){var wrap=document.getElementById('charityWrap');wrap.style.transition='none';wrap.style.maxHeight='600px';void wrap.offsetWidth;wrap.style.transition='';wrap.classList.add('visible');// scroll starts as block opens — tracks expansion
+setTimeout(function(){scrl.scrollTo({top:wrap.offsetTop,behavior:'smooth'});},80);// pre-select donation after animation settles
+setTimeout(function(){var items=document.getElementById('donSw').querySelectorAll('.so');var prev=calcTotal();items[1].classList.add('act');donIdx=1;var ind=document.getElementById('donInd');ind.style.opacity='1';ind.style.left=items[1].offsetLeft+'px';ind.style.width=items[1].offsetWidth+'px';var next=calcTotal();if(next!==prev){animateTotal(prev,next);showDelta(50,'don');}updateCbHook();startLiveCounter();// final scroll to ensure full block visible
+setTimeout(function(){scrl.scrollTo({top:scrl.scrollHeight,behavior:'smooth'});},100);},500);},280);},850);}
+function pickDon(i,el){var prev=calcTotal();document.querySelectorAll('#donSw .so').forEach(function(s){s.classList.remove('act')});el.classList.add('act');donIdx=i;var items=document.getElementById('donSw').querySelectorAll('.so'),ind=document.getElementById('donInd');ind.style.opacity='1';ind.style.left=items[i].offsetLeft+'px';ind.style.width=items[i].offsetWidth+'px';var next=calcTotal();if(next!==prev){animateTotal(prev,next);showDelta(donAmts[i],'don');}updateCbHook();}
+function skipDon(){var prev=calcTotal();donIdx=-1;document.querySelectorAll('#donSw .so').forEach(function(s){s.classList.remove('act')});document.getElementById('donInd').style.opacity='0';document.getElementById('donInd').style.width='0';animateTotal(prev,calcTotal());updateCbHook();}
+var recOpen=false;
+document.getElementById('recToggle').addEventListener('click',function(){recOpen=!recOpen;var b=document.getElementById('recBody'),c=document.getElementById('chev'),p=document.querySelector('.rec-expand-pill');if(recOpen){b.style.maxHeight=b.scrollHeight+'px';c.textContent='▲';p.style.background='var(--ep)';p.style.color='white';}else{b.style.maxHeight='0';c.textContent='▼';p.style.background='var(--echip)';p.style.color='var(--ep)';}});
+function switchR(i){document.querySelectorAll('.rdot').forEach(function(d,j){d.classList.toggle('a',j===i)});document.getElementById('recTotal').textContent=['1 300 ₴','820 ₴','800 ₴'][i];}
+function toggleSplit(row){row.classList.toggle('sel');row.querySelector('.si-btn').textContent=row.classList.contains('sel')?'✓':'+';splTotal=0;document.querySelectorAll('.si-row.sel').forEach(function(r){splTotal+=parseInt(r.dataset.price);});var btn=document.getElementById('splBtn');if(splTotal>0){btn.className='split-ftr-btn ready';btn.textContent='Підтвердити · '+splTotal+' ₴';}else{btn.className='split-ftr-btn empty';btn.textContent='Спочатку оберіть позиції';}}
+function showPayment(){
+  document.getElementById('zeroView').style.display='none';
+  var mv=document.getElementById('mainView');
+  mv.style.display='flex';
+  // Перезапустити анімацію появи блоків
+  ['mainBlockReceipt','mainBlockTips'].forEach(function(id){document.getElementById(id).classList.remove('main-show');});
+  setTimeout(function(){document.getElementById('mainBlockReceipt').classList.add('main-show');},60);
+  setTimeout(function(){document.getElementById('mainBlockTips').classList.add('main-show');},320);
+}
+function showSplit(){document.getElementById('mainView').style.display='none';document.getElementById('splitView').style.display='flex';}
+function hideSplit(){document.getElementById('splitView').style.display='none';document.getElementById('mainView').style.display='flex';}
+var msRating=-1;
+function doPay(){
+  document.getElementById('mainView').style.display='none';
+  var t=tipIdx===3?customAmt:(tipIdx>=0&&tipIdx<3?tipAmts[tipIdx]:0);
+  var d=donIdx>=0?donAmts[donIdx]:0;
+  var total=1300+t+d;
+  // Наповнити контент
+  document.getElementById('msPaid').textContent='Сплачено '+total.toLocaleString('uk-UA').replace(/,/g,' ')+' ₴';
+  var now=new Date();
+  var months=['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  document.getElementById('msDate').textContent=now.getDate()+' '+months[now.getMonth()]+' '+now.getFullYear()+' о '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  var donEl=document.getElementById('msDon');
+  if(d>0){donEl.style.display='block';document.getElementById('msDonSub').textContent=d+' ₴ відправлено захисникам';}
+  else{donEl.style.display='none';}
+  document.getElementById('msCbAmt').textContent=Math.round(total*0.05);
+  // Скинути стан відгуку
+  msRating=-1;
+  document.querySelectorAll('.ms-star-ico').forEach(function(s){s.classList.remove('on');});
+  document.getElementById('msComment').value='';
+  document.getElementById('msSend').classList.remove('active');
+  document.getElementById('msRevForm').style.display='';
+  document.getElementById('msRevSent').style.display='none';
+  // Скинути видимість блоків
+  document.querySelectorAll('.ms-reveal').forEach(function(el){el.classList.remove('ms-show');});
+  // Показати view
+  document.getElementById('mergedSuccessView').style.display='flex';
+  // Покрокове з'явлення
+  var hasDon=(d>0);
+  function revealBlock(id,delay){setTimeout(function(){var el=document.getElementById(id);if(el){el.classList.add('ms-show');}},delay);}
+  revealBlock('msBlockTop',80);
+  if(hasDon){
+    revealBlock('msDon',480);
+    revealBlock('msBlockCb',860);
+    revealBlock('msBlockRev',1220);
+  }else{
+    revealBlock('msBlockCb',440);
+    revealBlock('msBlockRev',800);
+  }
+}
+function resetAll(){
+  document.getElementById('mergedSuccessView').style.display='none';
+  document.getElementById('mainView').style.display='none';
+  document.getElementById('zeroView').style.display='flex';
+  msRating=-1;
+  tipIdx=-1;donIdx=-1;charityRevealed=false;deltaTimer=null;customAmt=0;customActive=false;
+  ['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('act','collapsed');});
+  document.getElementById('tipSw').classList.remove('imode');
+  document.getElementById('tipInd').style.opacity='0';document.getElementById('tipInd').style.width='0';
+  document.getElementById('donInd').style.opacity='0';document.getElementById('donInd').style.width='0';
+  document.querySelectorAll('#donSw .so').forEach(function(s){s.classList.remove('act');});
+  document.getElementById('cpTxt').textContent='Інша';
+  document.getElementById('csTxt').style.display='';
+  document.getElementById('tipCur').style.display='none';
+  document.getElementById('okBtn').classList.remove('visible');
+  document.getElementById('backBtn').classList.remove('visible');
+  var cw=document.getElementById('charityWrap');
+  cw.classList.remove('visible');
+  cw.style.transition='none';
+  cw.style.maxHeight='0';
+  void cw.offsetWidth;
+  cw.style.transition='';
+  document.getElementById('tot').textContent='1 300 ₴';
+  document.getElementById('cbAmt').textContent='65 ₴';
+  if(cntInterval){clearTimeout(cntInterval);cntInterval=null;}
+}
+(function(){
+  var stars=document.querySelectorAll('.ms-star');
+  function initStars(){
+    stars=document.querySelectorAll('.ms-star');
+    stars.forEach(function(s){
+      s.addEventListener('click',function(){
+        var i=parseInt(this.dataset.i);
+        msRating=i;
+        stars.forEach(function(st,j){st.querySelector('.ms-star-ico').classList.toggle('on',j<=i);});
+        document.getElementById('msSend').classList.add('active');
+      });
+      s.addEventListener('mouseenter',function(){
+        var i=parseInt(this.dataset.i);
+        stars.forEach(function(st,j){st.querySelector('.ms-star-ico').style.color=j<=i?'var(--ep)':'';});
+      });
+    });
+    document.getElementById('msStars').addEventListener('mouseleave',function(){
+      stars.forEach(function(s){s.querySelector('.ms-star-ico').style.color='';});
+    });
+    document.getElementById('msComment').addEventListener('input',function(){
+      if(this.value.length>0)document.getElementById('msSend').classList.add('active');
+    });
+    document.getElementById('msSend').addEventListener('click',function(){
+      if(!this.classList.contains('active'))return;
+      // Замінити форму на epilogue
+      var form=document.getElementById('msRevForm');
+      var sent=document.getElementById('msRevSent');
+      form.style.opacity='0';
+      form.style.transition='opacity .25s ease';
+      setTimeout(function(){
+        form.style.display='none';
+        sent.style.display='block';
+        var scrl=document.getElementById('msScroll');
+        setTimeout(function(){scrl.scrollTo({top:scrl.scrollHeight,behavior:'smooth'});},200);
+      },260);
+    });
+  }
+  initStars();
+})();
+setTimeout(function(){
+  var t1=document.getElementById('t1');
+  document.getElementById('tipHint').style.left=(t1.offsetLeft+t1.offsetWidth/2)+'px';
+  updateCbHook();
+},120);
+setTimeout(function(){function animCnt(el,t,d){var c=t-47,s=Math.ceil(47/(d/16));var r=setInterval(function(){c=Math.min(c+s,t);el.textContent=c.toLocaleString('uk-UA').replace(/,/g,' ');if(c>=t)clearInterval(r);},16);}animCnt(document.getElementById('cnt'),1247,800);},500);
+</script>

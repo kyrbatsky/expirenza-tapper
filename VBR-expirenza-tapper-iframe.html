@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<!--
+  EXPIRENZA TAPPER — iframe edition
+  ═══════════════════════════════════════════════════════════
+  Embed example:
+    <iframe
+      src="expirenza-tapper-iframe.html"
+      style="width:100%; height:100vh; border:none;"
+      allow="autoplay"
+      scrolling="no">
+    </iframe>
+
+  postMessage  parent → game:
+    iframe.contentWindow.postMessage({ cmd: 'pause'  }, '*')
+    iframe.contentWindow.postMessage({ cmd: 'resume' }, '*')
+
+  postMessage  game → parent:
+    { type: 'gameOver', score: N, level: N }
+    { type: 'levelUp',  level: N }
+  ═══════════════════════════════════════════════════════════
+-->
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <!-- viewport meta intentionally omitted — controlled by parent page -->
+  <title>Expirenza Tapper</title>
+  <style>
+    
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html {
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      width:100%; height:100%;
+      background:#0C0520;
+      display:flex; align-items:center; justify-content:center;
+      overflow:hidden; touch-action:none; user-select:none;
+      -webkit-user-select:none;
+    }
+    canvas { display:block; touch-action:none; }
+  </style>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+// ============================================================
+//  EXPIRENZA — WAITER RUSH 🍽️
+//  Serve guests the RIGHT dish before they reach the waiter!
+//  Select a dish from the panel, then tap the row to serve.
+// ============================================================
+
+const canvas = document.getElementById('gc');
+const ctx    = canvas.getContext('2d');
+
+const LW = 390, LH = 660;
+canvas.width = LW; canvas.height = LH;
+
+function fitCanvas() {
+  const s = Math.min(window.innerWidth / LW, window.innerHeight / LH);
+  canvas.style.width  = (LW * s) + 'px';
+  canvas.style.height = (LH * s) + 'px';
+}
+fitCanvas();
+window.addEventListener('resize', fitCanvas);
+
+// ── LAYOUT ───────────────────────────────────────────────────
+const HEADER_H = 90;
+const PANEL_H  = 90;
+const GAME_H   = LH - HEADER_H - PANEL_H;  // 480
+const ROWS     = 4;
+const ROW_H    = GAME_H / ROWS;             // 120
+const PANEL_Y  = HEADER_H + GAME_H;        // 570
+
+const WAITER_X  = 36;
+const DISH_START = 75;
+const GUEST_START = LW - 12;
+const DANGER_X   = 62;
+
+// ── DISH CATALOGUE ───────────────────────────────────────────
+const DISHES = [
+  { emoji: '🍕', name: 'Піца',   col: '#FF6B35' },
+  { emoji: '🍔', name: 'Бургер', col: '#E8B422' },
+  { emoji: '☕', name: 'Кава',   col: '#7B4F2E' },
+  { emoji: '🥩', name: 'Стейк',  col: '#C0392B' },
+];
+
+// Active dish count scales with level
+// Lv1=1 dish, Lv2=2, Lv3=3, Lv4+=4
+function activeDishCount() {
+  if (level < 2) return 1;
+  if (level < 3) return 2;
+  if (level < 4) return 3;
+  return 4;
+}
+
+// ── HAPTICS ───────────────────────────────────────────────────
+function vibe(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// Rank titles based on level reached
+function getRank(lvl) {
+  if (lvl <= 1) return { emoji: '😬', title: 'Перший день на роботі' };
+  if (lvl <= 2) return { emoji: '🍔', title: 'Вже знаєш де кухня' };
+  if (lvl <= 3) return { emoji: '💪', title: 'Три страви — не жарт!' };
+  if (lvl <= 4) return { emoji: '🌟', title: 'Повне меню освоєно!' };
+  return { emoji: '🔥', title: 'ШЕФ, ВСЕ ГОРИТЬ!' };
+}
+
+// ── DESIGN TOKENS (Expirenza) ─────────────────────────────────
+const CLR = {
+  accent:  '#6638DD',
+  accentL: '#8A5EFF',
+  bg0:     '#0C0520',
+  bg1:     '#170A35',
+  rowEven: 'rgba(102,56,221,0.06)',
+  rowOdd:  'rgba(0,0,0,0.10)',
+  barTop:  '#9B6832',
+  barMid:  '#6B4520',
+  barBot:  '#3D2408',
+  skin:    '#FDBCB4',
+  text:    '#FFFFFF',
+  sub:     '#9F8CC0',
+  gold:    '#FFD700',
+  danger:  '#FF4455',
+  heart:   '#FF4D6D',
+  green:   '#4ADE80',
+  panel:   '#140830',
+  guestCols: ['#FF6B6B','#4ECDC4','#45B7D1','#FF9F43','#A29BFE','#FD79A8'],
+  guestEmoji: ['👨','👩','🧔','👱','👴','👵','🧑','🧒','👲','🧕'],
+};
+
+// ── STATE ─────────────────────────────────────────────────────
+let phase        = 'start';
+let score        = 0;
+let lives        = 3;
+let level        = 1;
+let orders       = [];   // dishes in transit
+let guests       = [];
+let fx           = [];
+let spawnCD      = 800;
+let spawnInterval = 2600;
+let guestSpd     = 0.60;
+let dishSpd      = 5.5;
+let shakeAmt     = 0;
+let tapFlash     = new Array(ROWS).fill(0);
+let selectedDish = null;  // 0-3 or null
+let unlockAnim   = null;  // { dishIdx, timer, maxTimer } — new dish celebration
+let showTutorial = false; // first-play micro-tutorial
+let tutStep      = 0;     // 0=pick dish hint  1=tap row hint  2=done
+let tutTimer     = 0;     // auto-dismiss countdown (ms)
+let lastTs       = 0;
+let uid          = 0;
+let hiScore      = +(localStorage.getItem('exp_waiter_hi') || 0);
+
+// ── HELPERS ───────────────────────────────────────────────────
+function surfY(row) {
+  return HEADER_H + row * ROW_H + ROW_H * 0.60;
+}
+
+function pill(x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.arcTo(x + w, y,     x + w, y + rr,     rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.arcTo(x + w, y + h, x + w - rr, y + h, rr);
+  ctx.lineTo(x + rr, y + h);
+  ctx.arcTo(x,     y + h, x,     y + h - rr, rr);
+  ctx.lineTo(x,     y + rr);
+  ctx.arcTo(x,     y,     x + rr, y,          rr);
+  ctx.closePath();
+}
+
+function em(text, x, y, size) {
+  ctx.font = size + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+  ctx.textBaseline = 'alphabetic';
+}
+
+// ── DRAW: BACKGROUND ──────────────────────────────────────────
+function drawBG() {
+  const g = ctx.createLinearGradient(0, 0, 0, LH);
+  g.addColorStop(0, CLR.bg0);
+  g.addColorStop(1, CLR.bg1);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, LW, LH);
+
+  for (let r = 0; r < ROWS; r++) {
+    const ry = HEADER_H + r * ROW_H;
+    ctx.fillStyle = r % 2 ? CLR.rowOdd : CLR.rowEven;
+    ctx.fillRect(0, ry, LW, ROW_H);
+
+    ctx.strokeStyle = 'rgba(102,56,221,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, ry); ctx.lineTo(LW, ry); ctx.stroke();
+
+    if (tapFlash[r] > 0) {
+      ctx.fillStyle = `rgba(102,56,221,${(tapFlash[r] * 0.20).toFixed(3)})`;
+      ctx.fillRect(0, ry, LW, ROW_H);
+    }
+  }
+}
+
+// ── DRAW: BAR COUNTER ─────────────────────────────────────────
+function drawBar(row) {
+  const sy = surfY(row);
+  const bh = 17;
+  const g = ctx.createLinearGradient(0, sy, 0, sy + bh);
+  g.addColorStop(0,   CLR.barTop);
+  g.addColorStop(0.3, CLR.barMid);
+  g.addColorStop(1,   CLR.barBot);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, sy, LW, bh);
+
+  ctx.fillStyle = 'rgba(255,215,120,0.14)';
+  ctx.fillRect(0, sy, LW, 3);
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+  ctx.lineWidth = 1;
+  for (let xi = 18; xi < LW; xi += 36) {
+    ctx.beginPath(); ctx.moveTo(xi, sy); ctx.lineTo(xi + 8, sy + bh); ctx.stroke();
+  }
+
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  ctx.fillRect(0, sy + bh, LW, 5);
+}
+
+// ── DRAW: WAITER (emoji-based) ────────────────────────────────
+function drawWaiter(row) {
+  const sy = surfY(row);
+  const wx = WAITER_X;
+
+  // Tray extending right
+  ctx.fillStyle = '#B0B0BC';
+  ctx.beginPath(); ctx.ellipse(wx + 14, sy - 4, 22, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#DCDCE8';
+  ctx.beginPath(); ctx.ellipse(wx + 14, sy - 5, 22, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Selected dish on tray
+  if (selectedDish !== null) {
+    em(DISHES[selectedDish].emoji, wx + 16, sy - 14, 17);
+  }
+
+  // Chef emoji — drawn above tray
+  em('🧑‍🍳', wx, sy - 38, 44);
+}
+
+// ── DRAW: ORDER (dish sliding on bar) ─────────────────────────
+function drawOrder(o) {
+  const sy = surfY(o.row);
+  const x = o.x, y = sy - 3;
+
+  // Plate shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.beginPath(); ctx.ellipse(x, y + 3, 16, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+  // White plate
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath(); ctx.arc(x, y - 8, 15, 0, Math.PI * 2); ctx.fill();
+
+  // Plate rim
+  ctx.strokeStyle = '#E8E8F0'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y - 8, 15, 0, Math.PI * 2); ctx.stroke();
+
+  // Dish emoji
+  em(DISHES[o.type].emoji, x, y - 8, 18);
+}
+
+// ── DRAW: GUEST (emoji-based) ─────────────────────────────────
+function drawGuest(g) {
+  const sy = surfY(g.row);
+  const x  = g.x;
+  const ey = sy - 22; // emoji vertical center
+
+  // Pick face based on state
+  let face = g.emoji;
+  if (g.state === 'eat')  face = '😋';
+  if (g.angryTimer > 0)   face = '😤';
+
+  em(face, x, ey, 42);
+
+  // Dish order bubble — drawn above emoji head (ey - ~21 = top of emoji)
+  if (g.state === 'walk' || g.angryTimer > 0) {
+    const bx = x;
+    const by = ey - 32; // sit just above the emoji
+    // Bubble bg
+    ctx.fillStyle = 'rgba(255,255,255,0.94)';
+    pill(bx - 17, by - 14, 34, 22, 8); ctx.fill();
+    ctx.strokeStyle = DISHES[g.wantsDish].col;
+    ctx.lineWidth = 2;
+    pill(bx - 17, by - 14, 34, 22, 8); ctx.stroke();
+    // Bubble tail
+    ctx.fillStyle = 'rgba(255,255,255,0.94)';
+    ctx.beginPath();
+    ctx.moveTo(bx - 5, by + 8);
+    ctx.lineTo(bx,     by + 15);
+    ctx.lineTo(bx + 5, by + 8);
+    ctx.closePath(); ctx.fill();
+    // Dish icon
+    em(DISHES[g.wantsDish].emoji, bx, by - 3, 15);
+  }
+
+  // Danger pulse when close to waiter
+  if (g.state === 'walk' && g.x < DANGER_X + 90) {
+    const alpha = Math.min(1, (1 - (g.x - DANGER_X) / 90) * 0.85);
+    ctx.strokeStyle = `rgba(255,68,68,${alpha.toFixed(2)})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, ey, 26, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
+// ── DRAW: HUD ─────────────────────────────────────────────────
+function drawHUD() {
+  const hg = ctx.createLinearGradient(0, 0, 0, HEADER_H);
+  hg.addColorStop(0, '#1E0D4A');
+  hg.addColorStop(1, CLR.bg0);
+  ctx.fillStyle = hg;
+  ctx.fillRect(0, 0, LW, HEADER_H);
+
+  ctx.fillStyle = CLR.accent;
+  ctx.fillRect(0, HEADER_H - 2, LW, 2);
+
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.accentL;
+  ctx.fillText('EXPIRENZA', LW / 2, 19);
+
+  ctx.font = '800 17px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.text;
+  ctx.fillText('ПОДАЙ АБО ПРОГРАЙ  🍽️', LW / 2, 44);
+
+  ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.sub;
+  ctx.fillText('— LEVEL ' + level + ' —', LW / 2, 62);
+
+  // ── Progress bar to next level (centered under level label) ──
+  const lvlProg = (score % 180) / 180;
+  const pbW = 80, pbH = 3, pbX = LW / 2 - 40, pbY = 68;
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  pill(pbX, pbY, pbW, pbH, 2); ctx.fill();
+  if (lvlProg > 0) {
+    ctx.fillStyle = CLR.gold;
+    pill(pbX, pbY, Math.max(pbH, pbW * lvlProg), pbH, 2); ctx.fill();
+  }
+
+
+  // Score
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.sub;
+  ctx.fillText('SCORE', 14, 25);
+  ctx.font = '800 26px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.gold;
+  ctx.fillText(score, 14, 55);
+
+  // Lives
+  ctx.textAlign = 'right';
+  ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.sub;
+  ctx.fillText('LIVES', LW - 14, 25);
+  for (let i = 0; i < 3; i++) {
+    ctx.font = '20px sans-serif';
+    ctx.fillStyle = i < lives ? CLR.heart : '#333';
+    ctx.fillText(i < lives ? '❤' : '♡', LW - 14 - i * 26, 54);
+  }
+
+  // ── Pause / Resume button (bottom-right corner of header) ──
+  if (phase === 'play' || phase === 'paused') {
+    const pbtnX = LW - 18, pbtnY = 74, pbtnR = 13;
+    ctx.fillStyle = phase === 'paused'
+      ? 'rgba(102,56,221,0.45)'
+      : 'rgba(255,255,255,0.08)';
+    ctx.beginPath(); ctx.arc(pbtnX, pbtnY, pbtnR, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = phase === 'paused' ? CLR.accentL : 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(pbtnX, pbtnY, pbtnR, 0, Math.PI * 2); ctx.stroke();
+    if (phase === 'paused') {
+      // Play triangle ▶
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.moveTo(pbtnX - 4, pbtnY - 6);
+      ctx.lineTo(pbtnX + 7, pbtnY);
+      ctx.lineTo(pbtnX - 4, pbtnY + 6);
+      ctx.closePath(); ctx.fill();
+    } else {
+      // Pause bars ⏸
+      ctx.fillStyle = 'rgba(255,255,255,0.80)';
+      ctx.fillRect(pbtnX - 5, pbtnY - 5, 4, 10);
+      ctx.fillRect(pbtnX + 1, pbtnY - 5, 4, 10);
+    }
+  }
+}
+
+// ── DRAW: DISH SELECTION PANEL ────────────────────────────────
+function drawDishPanel() {
+  // Background
+  ctx.fillStyle = CLR.panel;
+  ctx.fillRect(0, PANEL_Y, LW, PANEL_H);
+
+  // Top accent line
+  ctx.fillStyle = CLR.accent;
+  ctx.fillRect(0, PANEL_Y, LW, 2);
+
+  // Hint text
+  ctx.textAlign = 'center';
+  ctx.font = '11px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.sub;
+  const hint = selectedDish !== null
+    ? '← Тепер тапни рядок щоб подати'
+    : 'Обери страву для подачі';
+  ctx.fillText(hint, LW / 2, PANEL_Y + 16);
+
+  const n       = DISHES.length;
+  const btnW    = 74;
+  const btnH    = 56;
+  const gap     = 8;
+  const totalW  = n * btnW + (n - 1) * gap;
+  const startX  = (LW - totalW) / 2;
+  const btnTopY = PANEL_Y + 22;
+  const active  = activeDishCount();
+
+  DISHES.forEach((dish, i) => {
+    const bx = startX + i * (btnW + gap);
+    const isSelected = (selectedDish === i);
+    const isLocked   = (i >= active);
+
+    // Button shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    pill(bx + 2, btnTopY + 2, btnW, btnH, 12); ctx.fill();
+
+    // Button body
+    if (isSelected) {
+      const g = ctx.createLinearGradient(bx, btnTopY, bx, btnTopY + btnH);
+      g.addColorStop(0, '#8A5EFF');
+      g.addColorStop(1, '#5228CC');
+      ctx.fillStyle = g;
+    } else if (isLocked) {
+      ctx.fillStyle = '#1A1035';
+    } else {
+      ctx.fillStyle = '#251548';
+    }
+    pill(bx, btnTopY, btnW, btnH, 12); ctx.fill();
+
+    // Selected glow ring
+    if (isSelected) {
+      ctx.strokeStyle = CLR.accentL;
+      ctx.lineWidth = 2;
+      pill(bx, btnTopY, btnW, btnH, 12); ctx.stroke();
+    }
+
+    // Top shine
+    if (!isLocked) {
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      pill(bx + 2, btnTopY + 2, btnW - 4, btnH / 2 - 2, 10); ctx.fill();
+    }
+
+    // Emoji backing circle — white oval behind icon for contrast
+    const ecx = bx + btnW / 2;
+    const ecy = btnTopY + 18;
+    ctx.globalAlpha = isLocked ? 0.12 : (isSelected ? 0.22 : 0.18);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath(); ctx.ellipse(ecx, ecy, 20, 18, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Emoji — bigger and sharper
+    ctx.globalAlpha = isLocked ? 0.30 : 1;
+    em(dish.emoji, ecx, ecy, 30);
+    ctx.globalAlpha = 1;
+
+    // Dish name
+    ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLocked ? '#444' : (isSelected ? '#FFF' : 'rgba(255,255,255,0.75)');
+    ctx.textAlign = 'center';
+    ctx.fillText(isLocked ? '🔒' : dish.name, bx + btnW / 2, btnTopY + btnH - 6);
+  });
+}
+
+// ── DRAW: FX POPUPS ───────────────────────────────────────────
+function drawFX() {
+  fx.forEach(e => {
+    const a = e.t / e.max;
+    ctx.globalAlpha = a;
+    ctx.font = `bold ${e.sz}px system-ui, -apple-system, sans-serif`;
+    ctx.fillStyle = e.col;
+    ctx.textAlign = 'center';
+    ctx.fillText(e.txt, e.x, e.y - (1 - a) * 28);
+    ctx.globalAlpha = 1;
+  });
+}
+
+// ── DRAW: BUTTON ──────────────────────────────────────────────
+function drawBtn(cx, cy, bw, bh, label) {
+  ctx.fillStyle = 'rgba(0,0,0,0.32)';
+  pill(cx - bw/2 + 3, cy - bh/2 + 3, bw, bh, 999); ctx.fill();
+
+  const bg = ctx.createLinearGradient(cx, cy - bh/2, cx, cy + bh/2);
+  bg.addColorStop(0, '#7B4EFF');
+  bg.addColorStop(1, '#4D22B8');
+  ctx.fillStyle = bg;
+  pill(cx - bw/2, cy - bh/2, bw, bh, 999); ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.13)';
+  pill(cx - bw/2 + 2, cy - bh/2 + 2, bw - 4, bh/2 - 2, 999); ctx.fill();
+
+  ctx.fillStyle = '#FFF';
+  ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, cx, cy);
+  ctx.textBaseline = 'alphabetic';
+}
+
+// ── DRAW: OVERLAY SCREENS ─────────────────────────────────────
+// ── DRAW: NEW DISH UNLOCK CELEBRATION ────────────────────────
+function drawUnlockAnim() {
+  if (!unlockAnim || unlockAnim.timer <= 0) return;
+
+  const p = unlockAnim.timer / unlockAnim.maxTimer;
+  // fade-in (p: 1→0.85), hold (0.85→0.15), fade-out (0.15→0)
+  const alpha = p > 0.85 ? (1 - p) / 0.15 : p < 0.15 ? p / 0.15 : 1;
+
+  const dish = DISHES[unlockAnim.dishIdx];
+  const bw = 310, bh = 196;
+  const bx = (LW - bw) / 2;
+  const by = LH / 2 - bh / 2 - 15;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Dimmed background
+  ctx.fillStyle = 'rgba(12,5,32,0.78)';
+  ctx.fillRect(0, 0, LW, LH);
+
+  // Card gradient
+  const cg = ctx.createLinearGradient(bx, by, bx, by + bh);
+  cg.addColorStop(0, '#2A1265');
+  cg.addColorStop(1, '#180A3E');
+  ctx.fillStyle = cg;
+  pill(bx, by, bw, bh, 20); ctx.fill();
+
+  // Glowing border in dish colour
+  ctx.shadowColor = dish.col;
+  ctx.shadowBlur  = 20;
+  ctx.strokeStyle = dish.col;
+  ctx.lineWidth   = 2;
+  pill(bx, by, bw, bh, 20); ctx.stroke();
+  ctx.shadowBlur  = 0;
+  ctx.shadowColor = 'transparent';
+
+  // Top badge line
+  ctx.font      = 'bold 11px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = dish.col;
+  ctx.textAlign = 'center';
+  ctx.fillText('🔓  НОВА СТРАВА РОЗБЛОКОВАНА!', LW / 2, by + 22);
+
+  // Thin separator
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.moveTo(bx + 24, by + 32); ctx.lineTo(bx + bw - 24, by + 32);
+  ctx.stroke();
+
+  // Dish emoji — large, pulsing
+  const pulse = 1 + 0.07 * Math.sin(Date.now() / 180);
+  ctx.save();
+  ctx.translate(LW / 2, by + 96);
+  ctx.scale(pulse, pulse);
+  em(dish.emoji, 0, 0, 60);
+  ctx.restore();
+
+  // Dish name
+  ctx.font      = '800 26px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'center';
+  ctx.fillText(dish.name, LW / 2, by + 142);
+
+  // Sub-hint
+  ctx.font      = '13px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.sub;
+  ctx.fillText('З\'явилась у панелі страв ↓', LW / 2, by + 164);
+
+  // Level badge
+  ctx.font      = 'bold 12px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.gold;
+  ctx.fillText('🏅 Відкрито на рівні ' + level, LW / 2, by + 186);
+
+  ctx.restore();
+}
+
+// ── DRAW: PAUSE OVERLAY ───────────────────────────────────────
+function drawPauseOverlay() {
+  ctx.fillStyle = 'rgba(12,5,32,0.88)';
+  ctx.fillRect(0, 0, LW, LH);
+
+  ctx.textAlign = 'center';
+  ctx.font = '800 38px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#FFF';
+  ctx.fillText('⏸ ПАУЗА', LW / 2, LH / 2 - 80);
+
+  ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.gold;
+  ctx.fillText('Рахунок: ' + score, LW / 2, LH / 2 - 34);
+
+  ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.sub;
+  ctx.fillText('Рівень ' + level + (hiScore > 0 ? '  ·  Рекорд: ' + hiScore : ''), LW / 2, LH / 2 - 6);
+
+  drawBtn(LW / 2, LH / 2 + 60, 240, 54, '▶ Продовжити');
+}
+
+// ── DRAW: TUTORIAL HINTS ──────────────────────────────────────
+function drawTutorial() {
+  if (!showTutorial || tutStep >= 2) return;
+  const t = Date.now();
+  const blink  = 0.5 + 0.5 * Math.sin(t / 380);
+  const bounce = Math.sin(t / 300) * 6;
+
+  if (tutStep === 0) {
+    // ── Step 0: dim game rows, spotlight the dish panel ──
+
+    // Dim the play area
+    ctx.fillStyle = 'rgba(12,5,32,0.68)';
+    ctx.fillRect(0, HEADER_H, LW, GAME_H);
+
+    // Animated gold border around dish panel
+    ctx.strokeStyle = `rgba(255,215,0,${0.55 + 0.45 * blink})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = CLR.gold;
+    ctx.shadowBlur = 16 + 10 * blink;
+    ctx.strokeRect(1, PANEL_Y + 1, LW - 2, PANEL_H - 2);
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+
+    // Bouncing arrow pointing down
+    ctx.font = '26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('👇', LW / 2, PANEL_Y - 10 + bounce);
+
+    // Solid gold label pill above the arrow
+    const lx = LW / 2, ly = PANEL_Y - 56;
+    ctx.fillStyle = CLR.gold;
+    pill(lx - 126, ly - 20, 252, 38, 12); ctx.fill();
+    ctx.fillStyle = '#0C0520';
+    ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Крок 1: обери страву', lx, ly + 3);
+
+  } else if (tutStep === 1) {
+    // ── Step 1: spotlight game rows, hint to tap ──
+
+    // Dim the panel area
+    ctx.fillStyle = 'rgba(12,5,32,0.68)';
+    ctx.fillRect(0, PANEL_Y, LW, PANEL_H);
+
+    // Animated gold border around game rows
+    ctx.strokeStyle = `rgba(255,215,0,${0.55 + 0.45 * blink})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = CLR.gold;
+    ctx.shadowBlur = 16 + 10 * blink;
+    ctx.strokeRect(1, HEADER_H + 1, LW - 2, GAME_H - 2);
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+
+    // Bouncing arrow pointing right (into the rows)
+    const gy = HEADER_H + GAME_H / 2;
+    ctx.font = '26px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('👉', 10 + bounce, gy + 10);
+
+    // Solid gold label pill centered in play area
+    const lx = LW / 2, ly = HEADER_H + GAME_H / 2 - 28;
+    ctx.fillStyle = CLR.gold;
+    pill(lx - 138, ly - 20, 276, 38, 12); ctx.fill();
+    ctx.fillStyle = '#0C0520';
+    ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Крок 2: тапни рядок — подай!', lx, ly + 3);
+  }
+}
+
+function drawStart() {
+  ctx.fillStyle = 'rgba(12,5,32,0.92)';
+  ctx.fillRect(0, 0, LW, LH);
+  ctx.textAlign = 'center';
+
+  // ── Hero emoji ──
+  ctx.font = '62px sans-serif';
+  ctx.fillText('🍽️', LW/2, LH/2 - 158);
+
+  // ── Title — two-part ──
+  ctx.font = '800 40px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.accentL;
+  ctx.fillText('ПОДАЙ!', LW/2, LH/2 - 105);
+
+  ctx.font = '800 26px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText('АБО ПРОГРАЙ 😤', LW/2, LH/2 - 68);
+
+  // ── Brand ──
+  ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = CLR.sub;
+  ctx.fillText('by EXPIRENZA', LW/2, LH/2 - 46);
+
+  // ── Tagline ──
+  ctx.font = '15px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
+  ctx.fillText('Встигнеш нагодувати всіх?', LW/2, LH/2 - 18);
+
+  // ── Separator ──
+  ctx.strokeStyle = 'rgba(102,56,221,0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(LW/2 - 90, LH/2 - 4); ctx.lineTo(LW/2 + 90, LH/2 - 4);
+  ctx.stroke();
+
+  // ── 3-step how-to ──
+  const stepX = [78, 195, 312];
+  const steps = [
+    { icon: '🍽️', label: 'Обери страву' },
+    { icon: '👆',  label: 'Тапни рядок'  },
+    { icon: '😋',  label: 'Нагодуй!'     },
+  ];
+  steps.forEach((s, i) => {
+    em(s.icon, stepX[i], LH/2 + 24, 28);
+    ctx.font = '11px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.58)';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.label, stepX[i], LH/2 + 46);
+    if (i < 2) {
+      ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = CLR.sub;
+      ctx.fillText('→', (stepX[i] + stepX[i + 1]) / 2, LH/2 + 26);
+    }
+  });
+
+
+  // ── Hi-score ──
+  if (hiScore > 0) {
+    ctx.fillStyle = CLR.gold;
+    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
+    ctx.fillText('🏆 Рекорд: ' + hiScore, LW/2, LH/2 + 132);
+  }
+
+  drawBtn(LW/2, LH/2 + 168, 260, 54, 'Нумо Нагодуймо!');
+}
+
+function drawOver() {
+  ctx.fillStyle = 'rgba(12,5,32,0.94)';
+  ctx.fillRect(0, 0, LW, LH);
+  ctx.textAlign = 'center';
+
+  const isNewRecord = score > 0 && score > prevHiScore;
+  const rank = getRank(level);
+
+  if (isNewRecord) {
+    // ── VARIANT В — New Record ────────────────────────────────
+    const t = Date.now();
+    const shimmer = 0.7 + 0.3 * Math.sin(t / 400);
+    ctx.shadowColor = CLR.gold;
+    ctx.shadowBlur  = 24 * shimmer;
+    ctx.font = '64px sans-serif';
+    ctx.fillText('🏆', LW/2, LH/2 - 148);
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+
+    ctx.font = '800 36px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = CLR.gold;
+    ctx.fillText('НОВИЙ РЕКОРД!', LW/2, LH/2 - 88);
+
+    ctx.font = '800 52px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(score, LW/2, LH/2 - 26);
+
+    ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = CLR.sub;
+    ctx.fillText('очків', LW/2, LH/2 - 6);
+
+    const rankW = 220, rankH = 38, rankX = LW/2 - rankW/2, rankY = LH/2 + 12;
+    ctx.fillStyle = 'rgba(138,94,255,0.22)';
+    pill(rankX, rankY, rankW, rankH, 19); ctx.fill();
+    ctx.strokeStyle = CLR.accentL;
+    ctx.lineWidth = 1.5;
+    pill(rankX, rankY, rankW, rankH, 19); ctx.stroke();
+    ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = CLR.accentL;
+    ctx.fillText(rank.emoji + '  ' + rank.title, LW/2, rankY + rankH/2 + 5);
+
+    if (prevHiScore > 0) {
+      ctx.font = '13px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = CLR.sub;
+      ctx.fillText('Попередній рекорд: ' + prevHiScore, LW/2, LH/2 + 70);
+    }
+
+    ctx.strokeStyle = 'rgba(255,215,0,0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(LW/2 - 100, LH/2 + 86);
+    ctx.lineTo(LW/2 + 100, LH/2 + 86);
+    ctx.stroke();
+
+    drawBtn(LW/2, LH/2 + 133, 260, 54, 'ЗАХИСТИТИ РЕКОРД 🔥');
+
+  } else {
+    // ── VARIANT Б — Regular ───────────────────────────────────
+    ctx.font = '800 28px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = CLR.danger;
+    ctx.fillText('🚫  КУХНЯ ЗАКРИТА', LW/2, LH/2 - 148);
+
+    ctx.font = '52px sans-serif';
+    ctx.fillText(rank.emoji, LW/2, LH/2 - 94);
+
+    ctx.font = '800 18px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = CLR.accentL;
+    ctx.fillText(rank.title, LW/2, LH/2 - 56);
+
+    ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = CLR.sub;
+    ctx.fillText('Досягнуто рівня ' + level, LW/2, LH/2 - 34);
+
+    ctx.strokeStyle = 'rgba(159,140,192,0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(LW/2 - 120, LH/2 - 18);
+    ctx.lineTo(LW/2 + 120, LH/2 - 18);
+    ctx.stroke();
+
+    const colL = LW/2 - 72, colR = LW/2 + 72;
+    ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = CLR.sub;
+    ctx.fillText('РАХУНОК', colL, LH/2 + 4);
+    ctx.fillText('РЕКОРД', colR, LH/2 + 4);
+
+    ctx.font = '800 28px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(score, colL, LH/2 + 36);
+    ctx.fillStyle = CLR.gold;
+    ctx.fillText(hiScore > 0 ? hiScore : '—', colR, LH/2 + 36);
+
+    if (hiScore > score) {
+      const gap = hiScore - score;
+      ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = CLR.sub;
+      ctx.fillText('До рекорду — ' + gap + ' очок 😏', LW/2, LH/2 + 66);
+    } else if (hiScore === 0) {
+      ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = CLR.sub;
+      ctx.fillText('Перший результат!', LW/2, LH/2 + 66);
+    }
+
+    drawBtn(LW/2, LH/2 + 133, 240, 54, 'ЩЕ РАЗ! 🍕');
+  }
+}
+
+// ── GAME LOGIC ────────────────────────────────────────────────
+function addFX(x, y, txt, col, sz) {
+  fx.push({ x, y, txt, col: col || CLR.gold, sz: sz || 16, t: 55, max: 55 });
+}
+
+function resetGame() {
+  phase = 'play';
+  score = 0; lives = 3; level = 1;
+  orders = []; guests = []; fx = [];
+  spawnCD = 800; spawnInterval = 2600;
+  guestSpd = 0.58; dishSpd = 5.2;
+  shakeAmt = 0; tapFlash = new Array(ROWS).fill(0);
+  selectedDish = null;
+  unlockAnim   = null;
+  prevHiScore  = 0;
+  // Tutorial — show only on first ever play
+  showTutorial = !localStorage.getItem('exp_tut3');
+  tutStep  = 0;
+  tutTimer = 6000;
+}
+
+function spawnGuest() {
+  // During tutorial — max 1 active guest so the mechanic is clear
+  if (showTutorial && guests.filter(g => g.state !== 'back').length >= 1) return;
+
+  const maxPerRow = level >= 5 ? 3 : 2; // Lv5+: denser lanes
+  const rowLoad = new Array(ROWS).fill(0);
+  guests.forEach(g => { if (g.state !== 'back') rowLoad[g.row]++; });
+  const free = [];
+  for (let r = 0; r < ROWS; r++) { if (rowLoad[r] < maxPerRow) free.push(r); }
+  if (!free.length) return;
+
+  const row = free[Math.floor(Math.random() * free.length)];
+  const n   = activeDishCount();
+  guests.push({
+    id: uid++,
+    row, x: GUEST_START,
+    state: 'walk',
+    wantsDish: Math.floor(Math.random() * n),
+    emoji: CLR.guestEmoji[Math.floor(Math.random() * CLR.guestEmoji.length)],
+    angryTimer: 0,
+    eatTimer: 0,
+  });
+}
+
+function sendDish(row, type) {
+  // Don't allow two dishes of same row in flight
+  if (orders.some(o => o.row === row)) return;
+  orders.push({ id: uid++, row, x: DISH_START, type });
+}
+
+function loseLife() {
+  lives--;
+  shakeAmt = 20;
+  addFX(LW/2, LH/2 - 44, lives > 0 ? '💔 −1 LIFE' : '💔 GAME OVER', CLR.danger, 18);
+  if (lives <= 0) {
+    vibe([100, 80, 100, 80, 300]); // game over pattern
+    prevHiScore = hiScore; // remember record before this run
+    if (score > hiScore) { hiScore = score; localStorage.setItem('exp_waiter_hi', hiScore); }
+    setTimeout(() => { phase = 'over'; }, 700);
+  } else {
+    vibe(200); // lost a life
+  }
+}
+
+function update(dt) {
+  if (phase !== 'play') return;
+
+  // Unlock animation countdown (runs even while paused)
+  if (unlockAnim && unlockAnim.timer > 0) {
+    unlockAnim.timer -= dt;
+    if (unlockAnim.timer <= 0) unlockAnim = null;
+    return; // ← game is paused while popup is visible
+  }
+
+  // Tutorial auto-dismiss
+  if (showTutorial && tutTimer > 0) {
+    tutTimer -= dt;
+    if (tutTimer <= 0) {
+      showTutorial = false;
+      localStorage.setItem('exp_tut3', '1');
+    }
+  }
+
+  // Tap flash
+  for (let r = 0; r < ROWS; r++) {
+    if (tapFlash[r] > 0) tapFlash[r] = Math.max(0, tapFlash[r] - 0.05);
+  }
+
+  // Screen shake
+  if (shakeAmt > 0) shakeAmt = Math.max(0, shakeAmt - 0.85);
+
+  // Angry timer on guests
+  guests.forEach(g => { if (g.angryTimer > 0) g.angryTimer -= dt; });
+
+  // Guest spawn
+  spawnCD -= dt;
+  if (spawnCD <= 0) {
+    spawnGuest();
+    spawnCD = spawnInterval;
+    const minInterval = level >= 5 ? 500 : 750; // Lv5+: faster spawns
+    spawnInterval = Math.max(minInterval, spawnInterval * 0.982);
+    if (guestSpd < 2.8) guestSpd += level >= 5 ? 0.024 : 0.016;
+  }
+
+  // Move orders →
+  orders = orders.filter(o => {
+    o.x += dishSpd;
+
+    const hit = guests.find(g =>
+      g.row === o.row &&
+      (g.state === 'walk') &&
+      g.x > o.x - 12 &&
+      g.x < o.x + 22
+    );
+
+    if (hit) {
+      if (o.type === hit.wantsDish) {
+        // ✅ Correct dish!
+        hit.state = 'eat';
+        hit.eatTimer = 1000 + Math.random() * 300;
+        const pts = 10;
+        score += pts;
+        // Tutorial: dismiss on first successful serve
+        if (showTutorial) { showTutorial = false; localStorage.setItem('exp_tut3', '1'); }
+        vibe(40); // correct dish
+        addFX(hit.x, surfY(hit.row) - 75, '+' + pts, CLR.green, 15);
+        // Level up?
+        const newLvl = Math.floor(score / 180) + 1;
+        if (newLvl > level) {
+          const prevCount = activeDishCount();
+          level = newLvl;
+          dishSpd = 5.2 + level * 0.4;
+          vibe([30, 20, 30, 20, 80]); // level up
+          addFX(LW/2, LH/2 - 30, '⬆ LEVEL ' + level + '!', '#FFFFFF', 20);
+          const newCount = activeDishCount();
+          if (newCount > prevCount) {
+            unlockAnim = { dishIdx: newCount - 1, timer: 3800, maxTimer: 3800 };
+          }
+        }
+      } else {
+        // ❌ Wrong dish!
+        score = Math.max(0, score - 5);
+        hit.angryTimer = 650;
+        vibe([60, 40, 60]); // wrong dish
+        addFX(hit.x, surfY(hit.row) - 75, '−5  😤', CLR.danger, 15);
+      }
+      return false; // dish consumed either way
+    }
+
+    // Off screen: waste
+    if (o.x > LW + 32) { return false; }
+    return true;
+  });
+
+  // Move guests ←
+  guests = guests.filter(g => {
+    if (g.state === 'walk') {
+      g.x -= guestSpd;
+      if (g.x < DANGER_X) { loseLife(); return false; }
+    } else if (g.state === 'eat') {
+      g.eatTimer -= dt;
+      if (g.eatTimer <= 0) g.state = 'back';
+    } else if (g.state === 'back') {
+      g.x += guestSpd * 1.8;
+      if (g.x > LW + 32) return false;
+    }
+    return true;
+  });
+
+  // Age effects
+  fx = fx.filter(e => { e.t--; return e.t > 0; });
+
+}
+
+// ── INPUT ─────────────────────────────────────────────────────
+function onTap(cx, cy) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (cx - rect.left) * (LW / rect.width);
+  const y = (cy - rect.top)  * (LH / rect.height);
+
+  // ── Pause button (intercepted first during play) ──
+  if (phase === 'play' && Math.hypot(x - (LW - 18), y - 74) <= 18) {
+    phase = 'paused';
+    return;
+  }
+
+  if (phase === 'start') {
+    if (y > LH/2 + 141 && y < LH/2 + 195) resetGame();
+    return;
+  }
+  if (phase === 'over') {
+    if (y > LH/2 + 106 && y < LH/2 + 160) resetGame();
+    return;
+  }
+  if (phase === 'paused') {
+    // Resume via "▶ Продовжити" button (drawBtn center LH/2+60, h=54)
+    if (y > LH/2 + 33 && y < LH/2 + 87) { phase = 'play'; return; }
+    // Also resume via pause button in header
+    if (Math.hypot(x - (LW - 18), y - 74) <= 18) { phase = 'play'; return; }
+    return;
+  }
+  if (phase !== 'play') return;
+
+  // ── Dish panel tap ──
+  if (y >= PANEL_Y) {
+    const n       = DISHES.length;
+    const btnW    = 74, btnH = 56, gap = 8;
+    const totalW  = n * btnW + (n - 1) * gap;
+    const startX  = (LW - totalW) / 2;
+    const btnTopY = PANEL_Y + 22;
+
+    for (let i = 0; i < n; i++) {
+      if (i >= activeDishCount()) continue; // locked
+      const bx = startX + i * (btnW + gap);
+      if (x >= bx && x <= bx + btnW && y >= btnTopY && y <= btnTopY + btnH) {
+        selectedDish = (selectedDish === i) ? null : i;
+        // Tutorial: advance from step 0 (pick dish) → step 1 (tap row)
+        if (showTutorial && tutStep === 0 && selectedDish !== null) {
+          tutStep = 1; tutTimer = 6000;
+        }
+        return;
+      }
+    }
+    return;
+  }
+
+  // ── Row tap ──
+  const row = Math.floor((y - HEADER_H) / ROW_H);
+  if (row >= 0 && row < ROWS) {
+    if (selectedDish !== null) {
+      sendDish(row, selectedDish);
+      selectedDish = null;
+      tapFlash[row] = 1;
+    } else {
+      // Hint: need to pick a dish first
+      tapFlash[row] = 0.4;
+      addFX(LW/2, PANEL_Y - 20, '👇 Спочатку обери страву', CLR.sub, 12);
+    }
+  }
+}
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  onTap(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+canvas.addEventListener('mousedown', e => onTap(e.clientX, e.clientY));
+
+// ── RENDER ────────────────────────────────────────────────────
+function render() {
+  ctx.clearRect(0, 0, LW, LH);
+
+  ctx.save();
+  if (shakeAmt > 0) {
+    ctx.translate(
+      (Math.random() - 0.5) * shakeAmt * 0.32,
+      (Math.random() - 0.5) * shakeAmt * 0.32
+    );
+  }
+
+  drawBG();
+  drawHUD();        // header drawn first → characters/bubbles render on top of it
+  drawDishPanel();  // panel drawn first → characters don't overlap panel area
+  for (let r = 0; r < ROWS; r++) { drawBar(r); drawWaiter(r); }
+  orders.forEach(o => drawOrder(o));
+  guests.forEach(g => drawGuest(g));
+  drawFX();
+
+  ctx.restore();
+
+  // Tutorial hints (below unlock anim so it gets covered)
+  if (phase === 'play') drawTutorial();
+
+  // Unlock celebration overlay (on top of game, under phase screens)
+  drawUnlockAnim();
+
+  // Pause overlay
+  if (phase === 'paused') drawPauseOverlay();
+
+  if (phase === 'start') drawStart();
+  if (phase === 'over')  drawOver();
+}
+
+// ── LOOP ──────────────────────────────────────────────────────
+function loop(ts) {
+  const dt = Math.min(ts - (lastTs || ts), 50);
+  lastTs = ts;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+// ── IFRAME postMessage API ────────────────────────────────────
+// Parent can send: { cmd: 'pause' } or { cmd: 'resume' }
+// Game sends to parent: { type: 'gameOver', score, level }
+//                       { type: 'levelUp', level }
+window.addEventListener('message', e => {
+  if (!e.data || !e.data.cmd) return;
+  if (e.data.cmd === 'pause'  && phase === 'play') phase = 'paused';
+  if (e.data.cmd === 'resume' && phase === 'paused') phase = 'play';
+});
+
+function notifyParent(payload) {
+  try { window.parent.postMessage(payload, '*'); } catch (_) {}
+}
+
+// Patch loseLife to notify parent on game over
+const _loseLife = loseLife;
+loseLife = function() {
+  _loseLife();
+  if (lives <= 0) notifyParent({ type: 'gameOver', score, level });
+};
+
+// Patch update to notify parent on level up (hook into level change)
+const _update = update;
+update = function(dt) {
+  const prevLvl = level;
+  _update(dt);
+  if (level !== prevLvl) notifyParent({ type: 'levelUp', level });
+};
+
+document.fonts.ready.then(() => requestAnimationFrame(loop));
+</script>
+</body>
+</html>

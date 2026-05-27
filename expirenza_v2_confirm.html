@@ -1,0 +1,883 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,700;0,6..12,800&display=swap');
+:root{--ep:#6638DD;--ebg:#EDEAF8;--ecard:#FFFFFF;--et1:#030712;--et2:#6B7281;--ebrd:#D1D5DB;--echip:#E5E7EB}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:linear-gradient(145deg,#1A0B3D 0%,#0D0620 100%);min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:20px;font-family:'Nunito Sans',sans-serif}
+.ph{width:360px;background:linear-gradient(160deg,#EDEAF8 0%,#E6E2F5 100%);overflow:hidden;display:flex;flex-direction:column;border-radius:36px;box-shadow:0 20px 60px rgba(0,0,0,.18);min-height:700px}
+
+/* ── Carousel ── */
+.car-track{display:flex;transition:transform .42s cubic-bezier(0.22,1,0.36,1);will-change:transform}
+.car-dots{display:flex;justify-content:center;gap:6px;padding:4px 0 0}
+.car-dot{width:6px;height:6px;border-radius:50%;background:var(--ebrd);cursor:pointer;transition:all .22s}
+.car-dot.active{background:var(--ep);width:18px;border-radius:50px}
+
+/* ── Phase reveal ── */
+.phase-reveal{opacity:0;transform:translateY(18px);transition:opacity .6s cubic-bezier(0.22,1,0.36,1),transform .6s cubic-bezier(0.22,1,0.36,1)}
+.phase-reveal.phase-show{opacity:1;transform:translateY(0)}
+
+/* ── Cards & receipt ── */
+.scrl{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 12px 8px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);overflow:hidden;flex-shrink:0}
+.rh{padding:14px 16px 12px}
+.rh-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.ri{display:flex;justify-content:space-between;padding:10px 16px}
+.ri-n{font-size:14px;color:var(--et1);flex:1;padding-right:12px;line-height:1.4}
+.ri-p{font-size:14px;font-weight:700;color:var(--et1);white-space:nowrap}
+.show-more-row{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:.5px solid var(--ebrd);cursor:pointer;user-select:none}
+
+/* ── Tips ── */
+.tcard{padding:14px 14px 12px;flex-shrink:0}
+.waiter-row{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#9070EE,#6638DD);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;box-shadow:0 0 0 2px white,0 0 0 3.5px var(--ep)}
+.wnm{font-size:15px;font-weight:700;color:var(--et1)}.wrl{font-size:11px;color:var(--et2);margin-top:1px}
+.proof{font-size:11px;color:#34C759;font-weight:600;margin-bottom:12px;padding-left:46px}
+.seg-wrap{display:flex;align-items:center;width:100%}
+.back-btn{display:none;width:40px;height:40px;flex-shrink:0;border-radius:50%;background:var(--echip);border:none;align-items:center;justify-content:center;cursor:pointer;margin-right:8px;opacity:0;transition:opacity .2s}
+.back-btn.visible{display:flex;opacity:1}
+.sw{position:relative;background:var(--echip);border-radius:50px;padding:3px;display:flex;flex:1;overflow:hidden;border:1.5px solid transparent;min-height:58px;transition:background .25s,border-color .25s}
+.sw.imode{background:var(--ecard);border-color:var(--ep)}
+.sind{position:absolute;top:3px;height:calc(100% - 6px);background:var(--ep);border-radius:50px;pointer-events:none;transition:left .22s,width .22s,opacity .18s}
+.so,.cso{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 2px;position:relative;z-index:1;cursor:pointer;overflow:hidden;white-space:nowrap;min-width:0;text-align:center;transition:flex .28s ease,opacity .2s ease}
+.so.collapsed{flex:0;opacity:0;pointer-events:none}
+.sp,.cp{font-size:15px;font-weight:700;color:var(--et2);transition:color .15s}
+.sa,.cs{font-size:11px;color:var(--et2);transition:color .15s}
+.so.act .sp,.so.act .sa{color:#fff}
+.tip-cur{width:2px;height:18px;background:var(--ep);display:none;animation:blink 1s step-end infinite;border-radius:1px;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.ok-btn{background:var(--ep);border:none;border-radius:46px;font-size:13px;font-weight:700;color:white;cursor:pointer;flex-shrink:0;display:none;padding:8px 14px;white-space:nowrap}
+.ok-btn.visible{display:flex;align-items:center}
+.sw.imode .cso{flex-direction:row;align-items:center;justify-content:center;padding:0 6px 0 14px;gap:6px}
+.sw.imode .cp{font-size:17px;color:var(--et1)}
+.sw.imode .cs{display:none}
+.skip{text-align:center;color:var(--et2);font-size:12px;padding:7px 0 2px;cursor:pointer;opacity:.7}
+
+/* ── Charity ── */
+.charity-wrap{overflow:hidden;max-height:0;transition:opacity .6s cubic-bezier(0.22,1,0.36,1),transform .6s cubic-bezier(0.22,1,0.36,1);opacity:0;transform:translateY(12px)}
+.charity-wrap.visible{opacity:1;transform:translateY(0)}
+.charity-wrap .card{border-radius:24px;box-shadow:0 3px 6px rgba(0,0,0,.04)}
+.ch-hdr{padding:13px 14px 8px}.ch-ttl{font-size:15px;font-weight:700;color:var(--et1)}
+.ch-bd{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}
+.ch-org{display:flex;align-items:center;gap:10px;padding:4px 0 2px}
+.ch-nm{font-size:13px;font-weight:600;color:var(--et1)}.ch-ds{font-size:11px;color:var(--et2);margin-top:1px}
+.cnt-wrap{display:flex;align-items:center;gap:10px;padding:2px 0 4px}
+.cnt-avas{display:flex;align-items:center}
+.cnt-ava{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--ecard);margin-left:-5px;font-size:8px;font-weight:700;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cnt-ava:first-child{margin-left:0}
+.cnt-txt{flex:1}.cnt-num{font-size:11px;font-weight:700;color:var(--et1)}.cnt-lbl{font-size:10px;color:var(--et2);margin-top:1px}
+.cnt-dot{width:7px;height:7px;border-radius:50%;background:#34C759;flex-shrink:0;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.ch-div{height:.5px;background:var(--ebrd)}
+
+/* ── Footer ── */
+.ftr{background:var(--ecard);border-top:.5px solid var(--ebrd);padding:12px 14px 22px;flex-shrink:0}
+.tot-r{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.tot-l{font-size:14px;color:var(--et2)}
+.tot-right{display:flex;align-items:baseline;position:relative}
+.tot-v{font-size:22px;font-weight:700;color:var(--et1)}
+.tot-delta{font-size:13px;font-weight:700;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s;white-space:nowrap;position:absolute;right:0;top:-26px;padding:4px 11px;border-radius:20px}
+.tot-delta.show{opacity:1;transform:translateY(0)}
+.cb-a{padding:0 0 8px;display:flex;align-items:center;justify-content:space-between;position:relative}
+.cb-a-left{display:flex;align-items:center;gap:8px}.cb-a-label{font-size:12px;color:var(--et2);font-weight:600}.cb-a-sub{font-size:11px;color:var(--et2);opacity:.7}
+.cb-a-right{display:flex;align-items:center;gap:8px}
+.cb-a-amt{font-size:20px;font-weight:800;color:#1A7A3C}
+.cb-a-amt.pop{animation:popCb .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popCb{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+.cb-a-delta{position:absolute;right:56px;top:-22px;font-size:12px;font-weight:700;color:#1A7A3C;background:#b8f3ce;padding:2px 8px;border-radius:20px;opacity:0;pointer-events:none;white-space:nowrap}
+.cb-a-delta.show{animation:floatCb .9s ease forwards}
+@keyframes floatCb{0%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(-8px)}100%{opacity:0;transform:translateY(-14px)}}
+.mono-badge{background:var(--et1);color:white;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;letter-spacing:-.2px}
+.pay-mono{width:100%;background:var(--et1);color:white;border:none;border-radius:999px;padding:15px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-family:'Nunito Sans',sans-serif;font-weight:700}
+.pay-row{display:flex;gap:10px;margin-top:10px}
+.pay-alt{flex:1;background:var(--ecard);color:var(--et1);border:.5px solid var(--ebrd);border-radius:999px;padding:13px 8px;font-size:14px;font-weight:600;text-align:center;cursor:pointer;font-family:'Nunito Sans',sans-serif}
+.disclaimer{text-align:center;font-size:11px;color:var(--et2);margin-top:10px}
+.disclaimer span{color:var(--ep)}
+
+/* ── Split ── */
+.si-row{display:flex;align-items:center;padding:14px;gap:10px;cursor:pointer;transition:background .1s}
+.si-row+.si-row{border-top:.5px solid var(--ebrd)}
+.si-row.sel{background:#F3EEFF}
+.si-nm{font-size:14px;color:var(--et1);flex:1;line-height:1.35}
+.si-pr{font-size:14px;font-weight:700;color:var(--et1);white-space:nowrap;margin-right:10px}
+.si-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--ebrd);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--et2);flex-shrink:0;background:var(--ecard);transition:all .15s}
+.si-row.sel .si-btn{background:var(--ep);border-color:var(--ep);color:white;font-size:13px}
+.split-ftr-btn{width:100%;border:none;border-radius:999px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;transition:background .2s,color .2s;font-family:'Nunito Sans',sans-serif}
+.split-ftr-btn.empty{background:var(--echip);color:var(--et2);cursor:default}
+.split-ftr-btn.ready{background:var(--ep);color:white}
+
+/* ── Success ── */
+.ms-top{background:var(--ecard);padding:22px 16px 16px;text-align:center;flex-shrink:0}
+.ms-logo{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#3a8fa3,#2e6f80);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.ms-logo-txt{font-size:8px;font-weight:800;color:white;text-align:center;line-height:1.2;letter-spacing:.3px}
+.ms-paid{font-size:22px;font-weight:800;color:var(--et1);margin-bottom:4px}
+.ms-date{font-size:11px;color:var(--et2);margin-bottom:6px}
+.ms-receipt{font-size:12px;font-weight:700;color:var(--ep);cursor:pointer;display:inline-block;padding:2px 0;text-decoration:none}
+.ms-don{margin:10px 12px 0;border-radius:14px;padding:12px 14px;position:relative;overflow:hidden;flex-shrink:0}
+.ms-don::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#1572E4 0%,#1572E4 43%,#FFD800 60%,#FFD800 100%);opacity:.13;border-radius:14px;pointer-events:none}
+.ms-don-inner{position:relative;z-index:1;display:flex;align-items:center;gap:10px}
+.ms-don-ttl{font-size:13px;font-weight:800;color:var(--et1);margin-bottom:2px}
+.ms-don-sub{font-size:11px;color:var(--et2)}
+.ms-cb-card{margin:10px 12px 0;border-radius:18px;background:linear-gradient(140deg,#12101E 0%,#1C1435 55%,#0D0B1A 100%);padding:18px 18px 16px;position:relative;overflow:hidden;flex-shrink:0}
+.ms-cb-glow{position:absolute;top:-50px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(102,56,221,.38) 0%,transparent 68%);pointer-events:none}
+.ms-cb-glow2{position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;background:radial-gradient(circle,rgba(26,122,60,.2) 0%,transparent 70%);pointer-events:none}
+.ms-cb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.ms-cb-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.38);letter-spacing:1.4px;text-transform:uppercase}
+.ms-cb-badge3{background:rgba(255,255,255,.1);border:.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.7);font-size:9px;font-weight:800;padding:3px 9px;border-radius:99px;letter-spacing:.6px}
+.ms-cb-amount{display:flex;align-items:baseline;gap:4px;margin-bottom:3px}
+.ms-cb-plus{font-size:22px;font-weight:800;color:rgba(255,255,255,.4);margin-right:2px}
+.ms-cb-num{font-size:42px;font-weight:800;color:white;letter-spacing:-2px;line-height:1}
+.ms-cb-cur{font-size:22px;font-weight:700;color:rgba(255,255,255,.55)}
+.ms-cb-sub2{font-size:11px;color:rgba(255,255,255,.38);font-weight:600;margin-bottom:18px;letter-spacing:.2px}
+.ms-cb-footer{display:flex;justify-content:space-between;align-items:center}
+.ms-cb-dots{display:flex;gap:12px;align-items:center}
+.ms-cb-dot-g{display:flex;gap:3px}
+.ms-cb-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.2)}
+.ms-cb-mono-logo{font-size:13px;font-weight:800;color:rgba(255,255,255,.5);letter-spacing:.5px}
+.ms-rev{background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);margin:10px 12px 0;padding:16px;flex-shrink:0}
+.ms-rev-ttl{font-size:14px;font-weight:800;color:var(--et1);text-align:center;margin-bottom:16px;line-height:1.3}
+.ms-stars{display:flex;justify-content:center;gap:4px;margin-bottom:16px}
+.ms-star{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex:1;user-select:none}
+.ms-star-ico{font-size:28px;color:var(--ebrd);transition:color .15s;line-height:1;display:block;text-align:center}
+.ms-star-ico.on{color:var(--ep)}
+.ms-star-lbl{font-size:9px;color:var(--et2);font-weight:600;text-align:center;white-space:nowrap}
+.ms-comment{width:100%;background:var(--echip);border:.5px solid var(--ebrd);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--et1);font-family:'Nunito Sans',sans-serif;resize:none;outline:none;height:60px;display:block;max-height:0;opacity:0;margin-bottom:0;overflow:hidden;transition:max-height .4s cubic-bezier(0.22,1,0.36,1),opacity .35s ease,margin-bottom .4s ease}
+.ms-comment.cmt-on{max-height:80px;opacity:1;margin-bottom:10px}
+.ms-comment::placeholder{color:#9CA3AF}
+.ms-comment:focus{border-color:var(--ep);background:var(--ecard)}
+.ms-send-row{display:flex;gap:8px;align-items:center}
+.ms-cam{width:42px;height:42px;border-radius:12px;background:var(--echip);border:.5px solid var(--ebrd);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;cursor:pointer}
+.ms-send{flex:1;background:var(--ep);color:white;border:none;border-radius:999px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito Sans',sans-serif;opacity:.45;transition:opacity .2s}
+.ms-send.active{opacity:1}
+.ms-rev-form{transition:opacity .3s ease}
+.ms-rev-sent{display:none;animation:msEpi .4s ease forwards}
+@keyframes msEpi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ms-rev-sent-ico{font-size:30px;margin-bottom:8px;text-align:center}
+.ms-rev-sent-ttl{font-size:16px;font-weight:800;color:var(--et1);margin-bottom:3px;text-align:center}
+.ms-rev-sent-sub{font-size:12px;color:var(--et2);margin-bottom:14px;text-align:center;line-height:1.5}
+.ms-reveal{opacity:0;transform:translateY(12px);transition:opacity .6s cubic-bezier(0.22,1,0.36,1),transform .6s cubic-bezier(0.22,1,0.36,1)}
+.ms-reveal.ms-show{opacity:1;transform:translateY(0)}
+
+/* ── Scroll outer & hint ── */
+.scrl-outer{position:relative;flex:1;overflow:hidden;display:flex;flex-direction:column}
+.scroll-hint{position:absolute;bottom:0;left:0;right:0;height:96px;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:14px;opacity:0;transition:opacity .5s ease}
+.scroll-hint.hint-on{opacity:1}
+.sh-grad{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(237,234,248,0) 0%,#EDEAF8 68%)}
+.sh-arrow{position:relative;z-index:1;width:30px;height:30px;border-radius:50%;background:var(--ep);display:flex;align-items:center;justify-content:center;animation:sh-bounce 1.5s ease-in-out infinite}
+@keyframes sh-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+/* In-flow payment block */
+.pay-card{background:var(--ecard);border-radius:16px;border:.5px solid var(--ebrd);padding:12px 14px 16px;flex-shrink:0}
+</style>
+
+<div class="ph">
+
+<!-- ══ ZERO PAGE ══ -->
+<div id="zeroView" style="display:flex;flex-direction:column;flex:1;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#4E8FA3 0px,#4E8FA3 22px,#6AABBE 22px,#6AABBE 44px)"></div>
+  <div style="position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px 20px 32px">
+    <div style="background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12)">
+      <div style="padding:28px 24px 20px;text-align:center">
+        <div style="width:64px;height:64px;border-radius:50%;background:#5B96A8;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px">
+          <span style="font-size:9px;font-weight:800;color:white;text-align:center;letter-spacing:.5px;line-height:1.3">G ×<br>MILK BAR</span>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:#030712;margin-bottom:4px">G×Milk bar</div>
+        <div style="font-size:15px;color:#6B7281;font-weight:600">Стіл №7</div>
+      </div>
+      <div style="height:.5px;background:#D1D5DB;margin:0 20px"></div>
+      <div style="padding:8px 0 12px">
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer">
+          <div style="width:48px;height:48px;border-radius:50%;background:#6638DD;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="white" stroke-width="2"/><path d="M4 8h16M4 12h10" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div style="font-size:16px;font-weight:800;color:#030712">Переглянути меню</div>
+        </div>
+        <div style="height:.5px;background:#F3F4F6;margin:0 20px"></div>
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer" onclick="showPayment()">
+          <div style="width:48px;height:48px;border-radius:50%;background:#6638DD;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="3" stroke="white" stroke-width="2"/><path d="M2 10h20" stroke="white" stroke-width="2"/><rect x="5" y="14" width="4" height="2" rx="1" fill="white"/></svg>
+          </div>
+          <div style="font-size:16px;font-weight:800;color:#030712">Оплатити рахунок</div>
+        </div>
+        <div style="height:.5px;background:#F3F4F6;margin:0 20px"></div>
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer">
+          <div style="width:48px;height:48px;border-radius:50%;background:transparent;border:2px solid #6638DD;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5" stroke="#6638DD" stroke-width="2" stroke-linecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L13 14l-4 1 1-4 8.5-8.5z" stroke="#6638DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="font-size:16px;font-weight:800;color:#030712">Залишити відгук</div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:18px">
+      <span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:600">Powered by </span>
+      <span style="font-size:11px;color:white;font-weight:800">Expirenza</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN VIEW ══ -->
+<div id="mainView" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+
+  <div class="scrl-outer" id="scrlOuter">
+  <div class="scrl" id="mainScrl">
+
+    <!-- Receipt carousel -->
+    <div id="carWrap" class="phase-reveal" style="flex-shrink:0">
+      <div style="overflow:hidden">
+        <div id="carTrack" style="display:flex;transition:transform .42s cubic-bezier(0.22,1,0.36,1);will-change:transform">
+
+          <!-- ── Slide 1 · 9 позицій · 1 387 ₴ ── -->
+          <div style="min-width:100%;flex-shrink:0">
+            <div class="card">
+              <div class="rh">
+                <div class="rh-meta">
+                  <span style="font-size:13px;color:var(--et2)">Стіл №7 · 3 гості</span>
+                  <span style="font-size:13px;font-weight:600;color:var(--ep);cursor:pointer" onclick="showSplit()">Розділити ›</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px">
+                  <span style="font-size:18px;font-weight:800;color:var(--et1)">До сплати</span>
+                  <span style="font-size:22px;font-weight:800;color:var(--et1);letter-spacing:-.4px">1 387 ₴</span>
+                </div>
+              </div>
+              <div style="height:.5px;background:var(--ebrd)"></div>
+              <div class="ri"><span class="ri-n">1 × Борщ з пампушками</span><span class="ri-p">120 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Вареники з картоплею</span><span class="ri-p">150 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Стейк (medium)</span><span class="ri-p">385 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Салат "Нісуаз"</span><span class="ri-p">195 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Гарнір зі шпинату</span><span class="ri-p">90 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Крем-суп гарбузовий</span><span class="ri-p">130 ₴</span></div>
+              <!-- Hidden items -->
+              <div id="moreItems0" style="overflow:hidden;max-height:0;opacity:0;transition:max-height .5s cubic-bezier(0.22,1,0.36,1),opacity .4s ease">
+                <div class="ri"><span class="ri-n">1 × Десерт "Павлова"</span><span class="ri-p">145 ₴</span></div>
+                <div class="ri"><span class="ri-n">2 × Свіжевичавлений сік</span><span class="ri-p">140 ₴</span></div>
+                <div class="ri"><span class="ri-n">1 × Кава американо</span><span class="ri-p">32 ₴</span></div>
+              </div>
+              <div id="showMore0" class="show-more-row" onclick="revealMoreItems(0)">
+                <span style="font-size:13px;color:var(--et2)">і ще 3 позиції</span>
+                <span style="font-size:13px;font-weight:700;color:var(--ep)">Показати всі ›</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Slide 2 · 5 позицій · 820 ₴ ── -->
+          <div style="min-width:100%;flex-shrink:0">
+            <div class="card">
+              <div class="rh">
+                <div class="rh-meta">
+                  <span style="font-size:13px;color:var(--et2)">Стіл №7 · 3 гості</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px">
+                  <span style="font-size:18px;font-weight:800;color:var(--et1)">До сплати</span>
+                  <span style="font-size:22px;font-weight:800;color:var(--et1);letter-spacing:-.4px">820 ₴</span>
+                </div>
+              </div>
+              <div style="height:.5px;background:var(--ebrd)"></div>
+              <div class="ri"><span class="ri-n">1 × Борщ з пампушками</span><span class="ri-p">220 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Вареники з картоплею</span><span class="ri-p">180 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Сирники зі сметаною</span><span class="ri-p">160 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Кава американо</span><span class="ri-p">80 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Апельсиновий сік</span><span class="ri-p">180 ₴</span></div>
+            </div>
+          </div>
+
+          <!-- ── Slide 3 · 3 позиції · 480 ₴ ── -->
+          <div style="min-width:100%;flex-shrink:0">
+            <div class="card">
+              <div class="rh">
+                <div class="rh-meta">
+                  <span style="font-size:13px;color:var(--et2)">Стіл №7 · 3 гості</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px">
+                  <span style="font-size:18px;font-weight:800;color:var(--et1)">До сплати</span>
+                  <span style="font-size:22px;font-weight:800;color:var(--et1);letter-spacing:-.4px">480 ₴</span>
+                </div>
+              </div>
+              <div style="height:.5px;background:var(--ebrd)"></div>
+              <div class="ri"><span class="ri-n">1 × Піца Маргарита</span><span class="ri-p">280 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Чай з бергамотом</span><span class="ri-p">80 ₴</span></div>
+              <div class="ri"><span class="ri-n">1 × Тірамісу</span><span class="ri-p">120 ₴</span></div>
+            </div>
+          </div>
+
+        </div><!-- /carTrack -->
+      </div>
+      <div class="car-dots" id="carDots">
+        <div class="car-dot active" onclick="goToSlide(0)"></div>
+        <div class="car-dot" onclick="goToSlide(1)"></div>
+        <div class="car-dot" onclick="goToSlide(2)"></div>
+      </div>
+    </div><!-- /carWrap -->
+
+    <!-- Tips block — reveals after receipt -->
+    <div class="card tcard phase-reveal" id="tipsBlock">
+      <div class="waiter-row">
+        <div class="avatar">АН</div>
+        <div><div class="wnm">Чайові для Анни</div><div class="wrl">Офіціант вашого столу</div></div>
+      </div>
+      <div class="proof">9 з 10 гостей залишають чайові Анні</div>
+      <div style="position:relative;padding-top:18px">
+        <span id="tipHint" style="position:absolute;top:2px;font-size:11px;color:var(--et2);transform:translateX(-50%);left:50%;white-space:nowrap;pointer-events:none">найчастіше</span>
+        <div class="seg-wrap">
+          <button class="back-btn" id="backBtn" onclick="resetTips()">
+            <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><path d="M11 4L6 9L11 14" stroke="#6638DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="sw" id="tipSw">
+            <div class="sind" id="tipInd" style="width:0;opacity:0"></div>
+            <div class="so" id="t0" onclick="pickTip(0,this)"><span class="sp" id="tp0">5%</span><span class="sa" id="ta0">69 ₴</span></div>
+            <div class="so" id="t1" onclick="pickTip(1,this)"><span class="sp" id="tp1">10%</span><span class="sa" id="ta1">139 ₴</span></div>
+            <div class="so" id="t2" onclick="pickTip(2,this)"><span class="sp" id="tp2">15%</span><span class="sa" id="ta2">208 ₴</span></div>
+            <div class="cso" id="tipCustom" onclick="activateCustom()">
+              <span class="cp" id="cpTxt">Інша</span>
+              <span class="cs" id="csTxt">сума</span>
+              <span class="tip-cur" id="tipCur"></span>
+              <button class="ok-btn" id="okBtn" onclick="confirmCustom(event)">Ок</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="skip" onclick="skipTips()">Може, іншого разу</div>
+      <div id="thankToast" style="text-align:center;font-size:13px;font-weight:600;color:var(--ep);max-height:0;overflow:hidden;opacity:0;transition:opacity .25s,max-height .3s,padding .3s;padding:0">Дякуємо, Анна цінує! ❤️</div>
+    </div>
+
+    <!-- Charity block -->
+    <div class="charity-wrap" id="charityWrap">
+      <div class="card">
+        <div class="ch-hdr"><div class="ch-ttl">Підтримати захисників України</div></div>
+        <div class="ch-bd">
+          <div class="ch-org">
+            <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;position:relative">
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,#1572E4 0%,#1572E4 50%,#FFD800 50%,#FFD800 100%)"></div>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px">🛡️</div>
+            </div>
+            <div><div class="ch-nm">Повернись живим</div><div class="ch-ds">Офіційний благодійний фонд</div></div>
+          </div>
+          <div class="cnt-wrap">
+            <div class="cnt-avas">
+              <div class="cnt-ava" style="background:#FF6B6B">МА</div>
+              <div class="cnt-ava" style="background:#4ECDC4">ОВ</div>
+              <div class="cnt-ava" style="background:#45B7D1">ТН</div>
+              <div class="cnt-ava" style="background:#96CEB4">ІС</div>
+              <div class="cnt-ava" style="background:#DDA0DD">+</div>
+            </div>
+            <div class="cnt-txt">
+              <div class="cnt-num">Приєднайтесь до <span id="cnt">1 247</span> гостей</div>
+              <div class="cnt-lbl">які вже долучились цього місяця</div>
+            </div>
+            <div class="cnt-dot"></div>
+          </div>
+          <div class="ch-div"></div>
+          <div class="sw" id="donSw" style="margin-top:8px">
+            <div class="sind" id="donInd" style="width:0;opacity:0"></div>
+            <div class="so" onclick="pickDon(0,this)"><span class="sp">25 ₴</span><span class="sa">підтримка</span></div>
+            <div class="so" onclick="pickDon(1,this)"><span class="sp">50 ₴</span><span class="sa">від серця</span></div>
+            <div class="so" onclick="pickDon(2,this)"><span class="sp">100 ₴</span><span class="sa">героям</span></div>
+          </div>
+          <div class="skip" onclick="skipDon()">Пропустити</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment block (in-flow) -->
+    <div class="pay-card phase-reveal" id="payFtr">
+      <div class="tot-r">
+        <span class="tot-l">До оплати</span>
+        <div class="tot-right">
+          <div class="tot-delta" id="totDelta"></div>
+          <span class="tot-v" id="tot">1 387 ₴</span>
+        </div>
+      </div>
+      <div class="cb-a">
+        <div class="cb-a-left">
+          <span style="font-size:16px">💳</span>
+          <div><div class="cb-a-label">Кешбек на картку</div><div class="cb-a-sub">5% від усієї суми</div></div>
+        </div>
+        <div class="cb-a-right">
+          <div style="position:relative">
+            <span class="cb-a-delta" id="cbDelta"></span>
+            <span class="cb-a-amt" id="cbAmt">69 ₴</span>
+          </div>
+          <div class="mono-badge">mono</div>
+        </div>
+      </div>
+      <button class="pay-mono" onclick="doPay()"><span style="font-weight:400;letter-spacing:-.3px">mono</span>&nbsp;<span style="font-weight:700">Pay</span></button>
+      <div class="pay-row">
+        <button class="pay-alt" onclick="doPay()">&#x2318; Pay</button>
+        <button class="pay-alt" onclick="doPay()">Карткою онлайн</button>
+      </div>
+      <div class="disclaimer">Продовжуючи, ви приймаєте <span>Правила сервісу</span></div>
+    </div>
+
+  </div><!-- /mainScrl -->
+
+  <div class="scroll-hint" id="scrollHint">
+    <div class="sh-grad"></div>
+    <div class="sh-arrow"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v9" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M3.5 7.5L7 11l3.5-3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  </div>
+  </div><!-- /scrlOuter -->
+
+</div><!-- /mainView -->
+
+
+<!-- ══ SPLIT VIEW ══ -->
+<div id="splitView" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+  <div style="padding:18px 16px 14px;flex-shrink:0;background:var(--ebg)">
+    <button onclick="hideSplit()" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--ep);font-size:16px;font-weight:600;cursor:pointer;padding:0;margin-bottom:12px">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9L11 14" stroke="#6638DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Назад
+    </button>
+    <div style="font-size:22px;font-weight:700;color:var(--et1)">Розділення рахунку</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:0 12px 8px">
+    <div class="card">
+      <div class="si-row" data-price="120" onclick="toggleSplit(this)"><span class="si-nm">Борщ з пампушками</span><span class="si-pr">120 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="150" onclick="toggleSplit(this)"><span class="si-nm">Вареники з картоплею</span><span class="si-pr">150 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="385" onclick="toggleSplit(this)"><span class="si-nm">Стейк (medium)</span><span class="si-pr">385 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="195" onclick="toggleSplit(this)"><span class="si-nm">Салат "Нісуаз"</span><span class="si-pr">195 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="90" onclick="toggleSplit(this)"><span class="si-nm">Гарнір зі шпинату</span><span class="si-pr">90 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="130" onclick="toggleSplit(this)"><span class="si-nm">Крем-суп гарбузовий</span><span class="si-pr">130 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="145" onclick="toggleSplit(this)"><span class="si-nm">Десерт "Павлова"</span><span class="si-pr">145 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="140" onclick="toggleSplit(this)"><span class="si-nm">2 × Свіжевичавлений сік</span><span class="si-pr">140 ₴</span><div class="si-btn">+</div></div>
+      <div class="si-row" data-price="32" onclick="toggleSplit(this)"><span class="si-nm">Кава американо</span><span class="si-pr">32 ₴</span><div class="si-btn">+</div></div>
+    </div>
+  </div>
+  <div class="ftr"><button class="split-ftr-btn empty" id="splBtn">Спочатку оберіть позиції</button></div>
+</div>
+
+
+<!-- ══ SUCCESS VIEW ══ -->
+<div id="mergedSuccessView" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+  <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column" id="msScroll">
+    <div class="ms-top ms-reveal" id="msBlockTop">
+      <div class="ms-logo"><div class="ms-logo-txt">MILK<br>BAR</div></div>
+      <div class="ms-paid" id="msPaid">Сплачено 1 387 ₴</div>
+      <div class="ms-date" id="msDate"></div>
+      <a class="ms-receipt" href="#" onclick="return false">Отримати квитанцію про оплату</a>
+    </div>
+    <div class="ms-don ms-reveal" id="msDon" style="display:none">
+      <div class="ms-don-inner">
+        <div><div class="ms-don-ttl">Велика дяка вам за "бойові"!</div><div class="ms-don-sub" id="msDonSub">50 ₴ відправлено захисникам</div></div>
+        <span style="font-size:22px">💛💙</span>
+      </div>
+    </div>
+    <div class="ms-cb-card ms-reveal" id="msBlockCb">
+      <div class="ms-cb-glow"></div><div class="ms-cb-glow2"></div>
+      <div class="ms-cb-top"><span class="ms-cb-label">Кешбек</span><span class="ms-cb-badge3">mono</span></div>
+      <div class="ms-cb-amount"><span class="ms-cb-plus">+</span><span class="ms-cb-num" id="msCbAmt">69</span><span class="ms-cb-cur">₴</span></div>
+      <div class="ms-cb-sub2">нараховано на вашу картку • 5% від суми</div>
+      <div class="ms-cb-footer">
+        <div class="ms-cb-dots">
+          <div class="ms-cb-dot-g"><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div></div>
+          <div class="ms-cb-dot-g"><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div></div>
+          <div class="ms-cb-dot-g"><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div></div>
+          <div class="ms-cb-dot-g" style="opacity:.5"><div class="ms-cb-dot"></div><div class="ms-cb-dot"></div><div class="ms-cb-dot" style="background:rgba(255,255,255,.5)"></div><div class="ms-cb-dot" style="background:rgba(255,255,255,.5)"></div></div>
+        </div>
+        <span class="ms-cb-mono-logo">mono</span>
+      </div>
+    </div>
+    <div class="ms-rev ms-reveal" id="msBlockRev">
+      <div class="ms-rev-form" id="msRevForm">
+        <div class="ms-rev-ttl">Вам сподобалося у<br>нашому закладі?</div>
+        <div class="ms-stars" id="msStars">
+          <div class="ms-star" data-i="0"><span class="ms-star-ico">★</span><span class="ms-star-lbl">Жахливо</span></div>
+          <div class="ms-star" data-i="1"><span class="ms-star-ico">★</span><span class="ms-star-lbl">Погано</span></div>
+          <div class="ms-star" data-i="2"><span class="ms-star-ico">★</span><span class="ms-star-lbl">Добре</span></div>
+          <div class="ms-star" data-i="3"><span class="ms-star-ico">★</span><span class="ms-star-lbl">Чудово</span></div>
+        </div>
+        <textarea class="ms-comment" id="msComment" placeholder="Коментар"></textarea>
+        <div class="ms-send-row">
+          <div class="ms-cam">📷</div>
+          <button class="ms-send" id="msSend">Надіслати</button>
+        </div>
+      </div>
+      <div class="ms-rev-sent" id="msRevSent">
+        <div class="ms-rev-sent-ico">🎉</div>
+        <div class="ms-rev-sent-ttl">Дякуємо за відгук!</div>
+        <div class="ms-rev-sent-sub">Ми цінуємо вашу думку<br>і будемо ще кращими</div>
+        <div style="text-align:center;margin-top:16px;padding-bottom:4px">
+          <div onclick="resetAll()" style="display:inline-block;font-size:13px;font-weight:700;color:var(--et2);cursor:pointer;padding:8px 24px;border-radius:99px;background:var(--echip)">Закрити</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /ph -->
+
+<script>
+var orders=[
+  {total:1387,items:[
+    {n:'1 × Борщ з пампушками',p:120},{n:'1 × Вареники з картоплею',p:150},
+    {n:'1 × Стейк (medium)',p:385},{n:'1 × Салат "Нісуаз"',p:195},
+    {n:'1 × Гарнір зі шпинату',p:90},{n:'1 × Крем-суп гарбузовий',p:130},
+    {n:'1 × Десерт "Павлова"',p:145},{n:'2 × Свіжевичавлений сік',p:140},{n:'1 × Кава американо',p:32}
+  ]},
+  {total:820,items:[
+    {n:'1 × Борщ з пампушками',p:220},{n:'1 × Вареники з картоплею',p:180},
+    {n:'1 × Сирники зі сметаною',p:160},{n:'1 × Кава американо',p:80},{n:'1 × Апельсиновий сік',p:180}
+  ]},
+  {total:480,items:[
+    {n:'1 × Піца Маргарита',p:280},{n:'1 × Чай з бергамотом',p:80},{n:'1 × Тірамісу',p:120}
+  ]}
+];
+var currentSlide=0,baseAmount=1387;
+var tipIdx=-1,donIdx=-1,charityRevealed=false,deltaTimer=null;
+var tipAmts=[69,139,208,0],donAmts=[25,50,100];
+var customAmt=0,customActive=false,typingTimer=null,splTotal=0,cntInterval=null,msRating=-1;
+
+// ── Carousel ──
+var carTrack=document.getElementById('carTrack');
+var carDots=document.getElementById('carDots').querySelectorAll('.car-dot');
+var touchStartX=0,mouseDown=false,mouseStartX=0;
+
+function goToSlide(i){
+  currentSlide=i;
+  carTrack.style.transform='translateX('+(-i*100)+'%)';
+  carDots.forEach(function(d,j){d.classList.toggle('active',j===i);});
+  // Update amounts for selected order
+  var order=orders[i];
+  baseAmount=order.total;
+  tipAmts=[Math.round(order.total*.05),Math.round(order.total*.10),Math.round(order.total*.15),0];
+  // Reset tip selection
+  if(tipIdx!==-1){
+    tipIdx=-1;
+    ['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('act');});
+    document.getElementById('tipInd').style.opacity='0';document.getElementById('tipInd').style.width='0';
+  }
+  document.getElementById('ta0').textContent=tipAmts[0]+' ₴';
+  document.getElementById('ta1').textContent=tipAmts[1]+' ₴';
+  document.getElementById('ta2').textContent=tipAmts[2]+' ₴';
+  document.getElementById('tot').textContent=order.total.toLocaleString('uk-UA').replace(/,/g,' ')+' ₴';
+  updateCbHook();
+}
+
+carTrack.addEventListener('touchstart',function(e){touchStartX=e.touches[0].clientX;},{passive:true});
+carTrack.addEventListener('touchend',function(e){
+  var diff=touchStartX-e.changedTouches[0].clientX;
+  if(Math.abs(diff)>45){var n=currentSlide+(diff>0?1:-1);if(n>=0&&n<orders.length)goToSlide(n);}
+});
+carTrack.addEventListener('mousedown',function(e){mouseDown=true;mouseStartX=e.clientX;});
+document.addEventListener('mouseup',function(e){
+  if(!mouseDown)return;mouseDown=false;
+  var diff=mouseStartX-e.clientX;
+  if(Math.abs(diff)>45){var n=currentSlide+(diff>0?1:-1);if(n>=0&&n<orders.length)goToSlide(n);}
+});
+
+// ── Show more items ──
+function revealMoreItems(slideIdx){
+  var moreEl=document.getElementById('moreItems'+slideIdx);
+  var btnEl=document.getElementById('showMore'+slideIdx);
+  moreEl.style.maxHeight=moreEl.scrollHeight+'px';
+  moreEl.style.opacity='1';
+  setTimeout(function(){btnEl.style.display='none';},380);
+}
+
+// ── Navigation ──
+function showPayment(){
+  document.getElementById('zeroView').style.display='none';
+  document.getElementById('mainView').style.display='flex';
+  goToSlide(0);
+  setTimeout(function(){document.getElementById('carWrap').classList.add('phase-show');},60);
+  setTimeout(function(){
+    document.getElementById('tipsBlock').classList.add('phase-show');
+    var t1=document.getElementById('t1');
+    document.getElementById('tipHint').style.left=(t1.offsetLeft+t1.offsetWidth/2)+'px';
+  },360);
+  setTimeout(function(){
+    document.getElementById('payFtr').classList.add('phase-show');
+  },620);
+  setTimeout(checkScrollHint,950);
+}
+function checkScrollHint(){
+  var scrl=document.getElementById('mainScrl');
+  if(scrl.scrollHeight<=scrl.clientHeight+40)return;
+  var hint=document.getElementById('scrollHint');
+  hint.classList.add('hint-on');
+  scrl.addEventListener('scroll',function(){hint.classList.remove('hint-on');},{passive:true,once:true});
+  setTimeout(function(){
+    easeScroll(scrl,72,800,function(){
+      setTimeout(function(){easeScroll(scrl,0,600,null);},700);
+    });
+  },200);
+}
+function easeScroll(el,target,dur,cb){
+  var start=el.scrollTop,change=target-start,t0=null;
+  function step(ts){
+    if(!t0)t0=ts;
+    var p=Math.min((ts-t0)/dur,1),ease=p<0.5?2*p*p:-1+(4-2*p)*p;
+    el.scrollTop=start+change*ease;
+    if(p<1)requestAnimationFrame(step);else if(cb)cb();
+  }
+  requestAnimationFrame(step);
+}
+
+function showSplit(){
+  document.getElementById('mainView').style.display='none';
+  document.getElementById('splitView').style.display='flex';
+}
+function hideSplit(){
+  document.getElementById('splitView').style.display='none';
+  document.getElementById('mainView').style.display='flex';
+}
+
+// ── Tips logic ──
+function calcTotal(){
+  var t=tipIdx===3?customAmt:(tipIdx>=0?tipAmts[tipIdx]:0);
+  var d=donIdx>=0?donAmts[donIdx]:0;
+  return baseAmount+t+d;
+}
+function showDelta(a,type){
+  var el=document.getElementById('totDelta');
+  if(deltaTimer)clearTimeout(deltaTimer);
+  if(type==='don'){el.style.background='#EDFAF3';el.style.color='#1A6B3C';el.textContent='🇺🇦 +'+a+' ₴';}
+  else{el.style.background='#FFF0F5';el.style.color='#B52A6B';el.textContent='♥ +'+a+' ₴';}
+  el.classList.add('show');
+  deltaTimer=setTimeout(function(){el.classList.remove('show');},900);
+}
+function updateCbHook(){
+  var cb=Math.round(calcTotal()*.05);
+  var el=document.getElementById('cbAmt');if(!el)return;
+  var prev=parseInt(el.textContent)||0;if(cb===prev)return;
+  var delta=cb-prev;
+  el.textContent=cb+' ₴';
+  el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
+  el.addEventListener('animationend',function(){el.classList.remove('pop');},{once:true});
+  if(delta>0){
+    var d=document.getElementById('cbDelta');
+    d.textContent='+'+delta+' ₴';d.classList.remove('show');void d.offsetWidth;d.classList.add('show');
+    d.addEventListener('animationend',function(){d.classList.remove('show');},{once:true});
+  }
+}
+function animateTotal(from,to){
+  var el=document.getElementById('tot'),steps=12,step=(to-from)/steps,cur=from,i=0;
+  var t=setInterval(function(){
+    i++;cur+=step;el.textContent=Math.round(cur).toLocaleString('uk-UA').replace(/,/g,' ')+' ₴';
+    if(i>=steps){el.textContent=to.toLocaleString('uk-UA').replace(/,/g,' ')+' ₴';clearInterval(t);}
+  },18);
+}
+function pickTip(i,el){
+  if(customActive)return;
+  var prev=calcTotal();
+  ['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('act');});
+  el.classList.add('act');tipIdx=i;
+  var ind=document.getElementById('tipInd');
+  ind.style.opacity='1';ind.style.left=el.offsetLeft+'px';ind.style.width=el.offsetWidth+'px';
+  var next=calcTotal();
+  if(next!==prev){animateTotal(prev,next);showDelta(tipAmts[i],'tip');}
+  updateCbHook();revealCharity();
+}
+function activateCustom(){
+  if(customActive)return;
+  customActive=true;customAmt=0;
+  if(typingTimer)clearInterval(typingTimer);
+  ['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('act');document.getElementById(id).classList.add('collapsed');});
+  var ind=document.getElementById('tipInd');ind.style.opacity='0';ind.style.width='0';
+  document.getElementById('tipSw').classList.add('imode');
+  document.getElementById('cpTxt').textContent='';
+  document.getElementById('csTxt').style.display='none';
+  document.getElementById('tipCur').style.display='inline-block';
+  document.getElementById('okBtn').classList.add('visible');
+  document.getElementById('backBtn').classList.add('visible');
+  var digits=['1','5','0'],di=0,str='';
+  typingTimer=setInterval(function(){
+    if(di>=digits.length){clearInterval(typingTimer);return;}
+    str+=digits[di];di++;customAmt=parseInt(str);
+    document.getElementById('cpTxt').textContent=str+' ₴';
+  },320);
+}
+function confirmCustom(e){
+  e.stopPropagation();
+  if(typingTimer)clearInterval(typingTimer);
+  if(!customAmt)return;
+  document.getElementById('tipCur').style.display='none';
+  document.getElementById('okBtn').classList.remove('visible');
+  tipIdx=3;
+  var prev=baseAmount+(donIdx>=0?donAmts[donIdx]:0);
+  var next=calcTotal();
+  if(next!==prev){animateTotal(prev,next);showDelta(customAmt,'tip');}
+  updateCbHook();revealCharity();
+}
+function resetTips(){
+  if(typingTimer)clearInterval(typingTimer);
+  customActive=false;customAmt=0;tipIdx=-1;
+  ['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('collapsed','act');});
+  document.getElementById('tipSw').classList.remove('imode');
+  document.getElementById('cpTxt').textContent='Інша';
+  document.getElementById('csTxt').style.display='';
+  document.getElementById('tipCur').style.display='none';
+  document.getElementById('okBtn').classList.remove('visible');
+  document.getElementById('backBtn').classList.remove('visible');
+  var ind=document.getElementById('tipInd');ind.style.opacity='0';ind.style.width='0';
+  animateTotal(calcTotal()+customAmt,calcTotal());
+}
+function skipTips(){
+  if(customActive)return;
+  ['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('act');});
+  document.getElementById('tipInd').style.opacity='0';document.getElementById('tipInd').style.width='0';
+  tipIdx=-1;revealCharity();
+}
+
+// ── Charity ──
+function startLiveCounter(){
+  if(cntInterval)return;
+  var el=document.getElementById('cnt'),cur=1247;
+  function tick(){
+    cur++;el.style.transition='color .3s';el.style.color='#34C759';
+    el.textContent=cur.toLocaleString('uk-UA').replace(/,/g,' ');
+    setTimeout(function(){el.style.color='';},700);
+    cntInterval=setTimeout(tick,5000+Math.floor(Math.random()*4000));
+  }
+  cntInterval=setTimeout(tick,4000+Math.floor(Math.random()*3000));
+}
+function revealCharity(){
+  if(charityRevealed)return;charityRevealed=true;
+  var toast=document.getElementById('thankToast');
+  var scrl=document.getElementById('mainScrl');
+  toast.style.maxHeight='40px';toast.style.opacity='1';toast.style.padding='7px 0 3px';
+  setTimeout(function(){
+    toast.style.opacity='0';toast.style.maxHeight='0';toast.style.padding='0';
+    setTimeout(function(){
+      var wrap=document.getElementById('charityWrap');
+      wrap.style.transition='none';wrap.style.maxHeight='600px';
+      void wrap.offsetWidth;wrap.style.transition='';
+      wrap.classList.add('visible');
+      setTimeout(function(){scrl.scrollTo({top:wrap.offsetTop,behavior:'smooth'});},80);
+      setTimeout(function(){
+        var items=document.getElementById('donSw').querySelectorAll('.so');
+        var prev=calcTotal();
+        items[1].classList.add('act');donIdx=1;
+        var ind=document.getElementById('donInd');
+        ind.style.opacity='1';ind.style.left=items[1].offsetLeft+'px';ind.style.width=items[1].offsetWidth+'px';
+        var next=calcTotal();
+        if(next!==prev){animateTotal(prev,next);showDelta(50,'don');}
+        updateCbHook();startLiveCounter();
+        setTimeout(function(){scrl.scrollTo({top:scrl.scrollHeight,behavior:'smooth'});},100);
+      },500);
+    },280);
+  },850);
+}
+function pickDon(i,el){
+  var prev=calcTotal();
+  document.querySelectorAll('#donSw .so').forEach(function(s){s.classList.remove('act');});
+  el.classList.add('act');donIdx=i;
+  var items=document.getElementById('donSw').querySelectorAll('.so'),ind=document.getElementById('donInd');
+  ind.style.opacity='1';ind.style.left=items[i].offsetLeft+'px';ind.style.width=items[i].offsetWidth+'px';
+  var next=calcTotal();
+  if(next!==prev){animateTotal(prev,next);showDelta(donAmts[i],'don');}
+  updateCbHook();
+}
+function skipDon(){
+  var prev=calcTotal();donIdx=-1;
+  document.querySelectorAll('#donSw .so').forEach(function(s){s.classList.remove('act');});
+  document.getElementById('donInd').style.opacity='0';document.getElementById('donInd').style.width='0';
+  animateTotal(prev,calcTotal());updateCbHook();
+}
+
+// ── Split ──
+function toggleSplit(row){
+  row.classList.toggle('sel');
+  row.querySelector('.si-btn').textContent=row.classList.contains('sel')?'✓':'+';
+  splTotal=0;
+  document.querySelectorAll('.si-row.sel').forEach(function(r){splTotal+=parseInt(r.dataset.price);});
+  var btn=document.getElementById('splBtn');
+  if(splTotal>0){btn.className='split-ftr-btn ready';btn.textContent='Підтвердити · '+splTotal+' ₴';}
+  else{btn.className='split-ftr-btn empty';btn.textContent='Спочатку оберіть позиції';}
+}
+
+// ── Payment ──
+function doPay(){
+  document.getElementById('mainView').style.display='none';
+  var t=tipIdx===3?customAmt:(tipIdx>=0&&tipIdx<3?tipAmts[tipIdx]:0);
+  var d=donIdx>=0?donAmts[donIdx]:0;
+  var total=baseAmount+t+d;
+  document.getElementById('msPaid').textContent='Сплачено '+total.toLocaleString('uk-UA').replace(/,/g,' ')+' ₴';
+  var now=new Date();
+  var months=['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  document.getElementById('msDate').textContent=now.getDate()+' '+months[now.getMonth()]+' '+now.getFullYear()+' о '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  var donEl=document.getElementById('msDon');
+  if(d>0){donEl.style.display='block';document.getElementById('msDonSub').textContent=d+' ₴ відправлено захисникам';}
+  else{donEl.style.display='none';}
+  document.getElementById('msCbAmt').textContent=Math.round(total*.05);
+  msRating=-1;
+  document.querySelectorAll('.ms-star-ico').forEach(function(s){s.classList.remove('on');});
+  document.getElementById('msComment').value='';
+  document.getElementById('msComment').classList.remove('cmt-on');
+  document.getElementById('msSend').classList.remove('active');
+  document.getElementById('msRevForm').style.display='';document.getElementById('msRevForm').style.opacity='';
+  document.getElementById('msRevSent').style.display='none';
+  document.querySelectorAll('.ms-reveal').forEach(function(el){el.classList.remove('ms-show');});
+  document.getElementById('mergedSuccessView').style.display='flex';
+  var hasDon=(d>0);
+  function rb(id,delay){setTimeout(function(){var el=document.getElementById(id);if(el)el.classList.add('ms-show');},delay);}
+  rb('msBlockTop',60);
+  if(hasDon){rb('msDon',420);rb('msBlockCb',760);rb('msBlockRev',1120);}
+  else{rb('msBlockCb',380);rb('msBlockRev',720);}
+}
+
+// ── Reset ──
+function resetAll(){
+  document.getElementById('mergedSuccessView').style.display='none';
+  document.getElementById('mainView').style.display='none';
+  document.getElementById('zeroView').style.display='flex';
+  tipIdx=-1;donIdx=-1;charityRevealed=false;deltaTimer=null;customAmt=0;customActive=false;msRating=-1;
+  ['t0','t1','t2'].forEach(function(id){document.getElementById(id).classList.remove('act','collapsed');});
+  document.getElementById('tipSw').classList.remove('imode');
+  document.getElementById('tipInd').style.opacity='0';document.getElementById('tipInd').style.width='0';
+  document.getElementById('donInd').style.opacity='0';document.getElementById('donInd').style.width='0';
+  document.querySelectorAll('#donSw .so').forEach(function(s){s.classList.remove('act');});
+  document.getElementById('cpTxt').textContent='Інша';
+  document.getElementById('csTxt').style.display='';
+  document.getElementById('tipCur').style.display='none';
+  document.getElementById('okBtn').classList.remove('visible');
+  document.getElementById('backBtn').classList.remove('visible');
+  var cw=document.getElementById('charityWrap');
+  cw.classList.remove('visible');cw.style.transition='none';cw.style.maxHeight='0';void cw.offsetWidth;cw.style.transition='';
+  document.getElementById('carWrap').classList.remove('phase-show');
+  document.getElementById('tipsBlock').classList.remove('phase-show');
+  document.getElementById('payFtr').classList.remove('phase-show');
+  document.getElementById('scrollHint').classList.remove('hint-on');
+  document.getElementById('mainScrl').scrollTop=0;
+  // Reset show-more
+  var mi=document.getElementById('moreItems0');
+  if(mi){mi.style.maxHeight='0';mi.style.opacity='0';}
+  var sm=document.getElementById('showMore0');
+  if(sm)sm.style.display='flex';
+  if(cntInterval){clearTimeout(cntInterval);cntInterval=null;}
+  goToSlide(0);
+}
+
+// ── Stars ──
+(function(){
+  var stars=document.querySelectorAll('.ms-star');
+  stars.forEach(function(s){
+    s.addEventListener('click',function(){
+      var i=parseInt(this.dataset.i);msRating=i;
+      stars.forEach(function(st,j){st.querySelector('.ms-star-ico').classList.toggle('on',j<=i);});
+      var cmt=document.getElementById('msComment');
+      if(i<=1){cmt.classList.add('cmt-on');setTimeout(function(){cmt.focus();},420);}
+      else{cmt.classList.remove('cmt-on');cmt.value='';}
+      document.getElementById('msSend').classList.add('active');
+    });
+    s.addEventListener('mouseenter',function(){
+      var i=parseInt(this.dataset.i);
+      stars.forEach(function(st,j){st.querySelector('.ms-star-ico').style.color=j<=i?'var(--ep)':'';});
+    });
+  });
+  document.getElementById('msStars').addEventListener('mouseleave',function(){
+    stars.forEach(function(s){s.querySelector('.ms-star-ico').style.color='';});
+  });
+  document.getElementById('msComment').addEventListener('input',function(){
+    if(this.value.length>0)document.getElementById('msSend').classList.add('active');
+  });
+  document.getElementById('msSend').addEventListener('click',function(){
+    if(!this.classList.contains('active'))return;
+    var form=document.getElementById('msRevForm'),sent=document.getElementById('msRevSent');
+    form.style.opacity='0';form.style.transition='opacity .25s ease';
+    setTimeout(function(){
+      form.style.display='none';sent.style.display='block';
+      var scrl=document.getElementById('msScroll');
+      setTimeout(function(){scrl.scrollTo({top:scrl.scrollHeight,behavior:'smooth'});},200);
+    },260);
+  });
+})();
+
+setTimeout(function(){
+  var el=document.getElementById('cnt');if(!el)return;
+  var c=1200,s=setInterval(function(){c=Math.min(c+3,1247);el.textContent=c.toLocaleString('uk-UA').replace(/,/g,' ');if(c>=1247)clearInterval(s);},16);
+},500);
+</script>
